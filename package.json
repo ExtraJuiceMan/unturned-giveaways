@@ -1,0 +1,26 @@
+{
+  "name": "bot",
+  "version": "1.0.0",
+  "description": "Some shitty bot",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Maze xd",
+  "license": "ISC",
+  "dependencies": {
+    "bufferutil": "^3.0.3",
+    "discord.js": "^11.2.1",
+    "fs": "0.0.1-security",
+    "node-schedule": "^1.2.5",
+    "sqlite3": "^3.1.13",
+    "steam-totp": "^2.0.1",
+    "steam-tradeoffer-manager": "^2.9.1",
+    "steam-user": "^3.23.2",
+    "steamcommunity": "^3.33.1",
+    "util": "^0.10.3"
+  },
+  "devDependencies": {
+    "eslint-config-google": "^0.9.1"
+  }
+}

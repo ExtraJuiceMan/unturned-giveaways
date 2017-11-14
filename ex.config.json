@@ -1,0 +1,11 @@
+{
+  "token": "Discord Bot Token",
+  "prefix": "g>",
+  "account_name": "Steam Username",
+  "password": "Steam Password",
+  "shared_secret": "Steam Shared Secret",
+  "identity_secret": "Steam Identity Secret",
+  "channel_id": "Giveaway Channel ID",
+  "offer_message": "You won these items:",
+  "ownerID": ["Discord", "IDs", "Here"]
+}
