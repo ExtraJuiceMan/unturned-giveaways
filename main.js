@@ -238,10 +238,12 @@ function send_prize(url) {
 		}
 		console.log("Found " + inventory.length + " items");
 		try {
-			var offer = manager.createOffer(url); // trade url of person the offer is sent to.
-			offer.addMyItems(random(inventory, Math.floor(Math.random() * 5) + 5)); // items that get added to the trade
-			offer.setMessage(config.offer_message); // message included in the trade
+			var offer = manager.createOffer(url);
+			var sent_items = random(inventory, Math.floor(Math.random() * 5) + 5)
+			offer.addMyItems(sent_items);
+			offer.setMessage(config.offer_message);
 			offer.send(function(err, status) {
+				console.log('Offer sent!')
 				if (err) {
 					console.log(err);
 					return;
@@ -251,15 +253,14 @@ function send_prize(url) {
 					community.acceptConfirmationForObject(config.identity_secret, offer.id, function(err) {
 						if (err) {
 							console.log(err);
+							console.log('Offer was not accepted, error.')
+							return;
 						} else {
 							console.log("Offer confirmed, relogging.");
-							clientSteam.relog();
 						}
 					});
-				} else {
-					console.log(`Offer #${offer.id} sent successfully, relogging.`);
-					clientSteam.relog();
 				}
+				clientSteam.relog();
 			});
 
 		} catch (err) {
@@ -610,6 +611,25 @@ var status_j = schedule.scheduleJob('*/5 * * * *', function() {
 			client.user.setGame(`g>help | ${count} Entries!`, "https://www.twitch.tv/Courierfive")
 		} else {
 			client.user.setGame(`g>help | 0 Entries!`, "https://www.twitch.tv/Courierfive")
+		}
+	});
+});
+
+var loggedin_j = schedule.scheduleJob('55 * * * *', function() {
+	check_time = new Date().toLocaleString();
+	console.log(check_time + ' Checking to see if we are logged in...');
+	community.loggedIn(function (err, logged, family) {
+		if (err) {
+			console.log(err);
+		}
+		if (loggedIn) {
+			console.log('We are logged in, all is good.');
+		}
+		else {
+			console.log('NOT LOGGED IN, RELOGGING.');
+			if (!session_expire_login) {
+				clientSteam.relog();
+			}
 		}
 	});
 });
