@@ -9,6 +9,8 @@ var TradeOfferManager = require('steam-tradeoffer-manager');
 const config = require("./config.json");
 const db = new sqlite3.Database('./data.db');
 
+const ITEM_TYPES = ["common", "premium", "mythical", "rare", "uncommon"];
+
 db.serialize(function() {
 	db.run("CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY, url TEXT)");
 	db.run("CREATE TABLE IF NOT EXISTS entries(id INTEGER PRIMARY KEY)");
@@ -56,6 +58,55 @@ clientSteam.on('webSession', function(sessionID, cookies) {
 	});
 });
 
+clientSteam.on("friendMessage", function(steamID, msg) {
+	if (msg.indexOf(config.prefix) !== 0) {
+		return;
+	}
+	clientSteam.getPersonas([steamID], function(personas) {
+		var persona = personas[steamID];
+		var name = persona ? persona.player_name : ("[" + steamID + "]");
+		const args = msg.slice(config.prefix.length).trim().split(/ +/g);
+		const command = args.shift().toLowerCase();
+
+		console.log("Friend message from " + name + " [" + steamID + "]" + ": " + msg);
+
+		if (command == 'ping') {
+			clientSteam.chatMessage(steamID, "Pong!");
+		}
+		if (command == 'help') {
+			clientSteam.chatMessage(steamID, `Hi! I'm a bot created by Maze. Avaiable commands: \n ${config.prefix}take <type> \nValid item types: Common, Rare, Premium, Mythical, Uncommon \n This command will take specific type of items from your invmentory`)
+		}
+		if (command == 'take') {
+			if (args.length == 0) {
+				clientSteam.chatMessage(steamID, "Invalid command usage");
+			} else {
+				var type = args[0].toLowerCase();
+				var amount = args[1];
+				var match = ITEM_TYPES.includes(type);
+				if (!match) {
+					clientSteam.chatMessage(steamID, "Invalid item type! Valid item types: Common, Rare, Premium, Mythical, Uncommon");
+					return;
+				} else {
+					clientSteam.chatMessage(steamID, "Sure thing, just let me check your invmentory!");
+					try {
+						manager.getUserInventoryContents(steamID, 304930, 2, true, function(err, inv, cur) {
+							var playerinv = inv;
+							console.log(`User has ${playerinv.length} items.`)
+							var sort_items = playerinv.filter(function(item) {
+								return item.type.includes(capitalize_first(type));
+							});
+							ask_items(steamID, sort_items);
+						})
+					} catch (err) {
+						console.log(err);
+						clientSteam.chatMessage(steamID, "Sorry, but I failed to get your invmentory content! :(")
+					}
+				}
+			}
+		}
+	});
+});
+
 manager.on('newOffer', (offer) => {
 	if (offer.itemsToGive.length === 0) {
 		offer.accept((err, status) => {
@@ -83,6 +134,10 @@ community.on('sessionExpired', function(err) {
 	console.log('SESSION EXPIRED, RELOGGING.');
 	clientSteam.relog();
 });
+
+function capitalize_first(string) {
+	return string.charAt(0).toUpperCase() + string.slice(1);
+}
 
 function insert_user(id) {
 	var stmt = db.prepare('INSERT INTO entries VALUES (?)');
@@ -136,6 +191,31 @@ function random(arr, count) {
 		shuffled[i] = temp;
 	}
 	return shuffled.slice(min);
+}
+
+function ask_items(steamID, items_asked) {
+	var offer = manager.createOffer(steamID);
+	offer.addTheirItems(items_asked);
+	offer.setMessage(`These are the items that you're giving me :)`);
+	offer.send(function(err, status) {
+		if (err) {
+			console.log(err);
+			return;
+		}
+		if (status == 'pending') {
+			console.log(`Offer #${offer.id} sent, but requires confirmation`);
+			community.acceptConfirmationForObject(config.identity_secret, offer.id, function(err) {
+				if (err) {
+					console.log(err);
+				} else {
+					console.log(`Offer #${offer.id} confirmed`);
+				}
+			});
+		} else {
+			console.log(`Offer #${offer.id} sent successfully`);
+			clientSteam.chatMessage(steamID, `Offer #${offer.id} successfully sent!`)
+		}
+	});
 }
 
 function send_prize(url) {
