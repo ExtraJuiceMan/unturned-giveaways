@@ -10,6 +10,7 @@ const config = require("./config.json");
 const db = new sqlite3.Database('./data.db');
 
 const ITEM_TYPES = ["common", "premium", "mythical", "rare", "uncommon"];
+var session_expire_login = false;
 
 db.serialize(function() {
 	db.run("CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY, url TEXT)");
@@ -128,11 +129,18 @@ manager.on('newOffer', (offer) => {
 });
 
 community.on('sessionExpired', function(err) {
+	if (session_expire_login) {
+		return;
+	}
+	session_expire_login = true;
 	if (err) {
 		console.log(err);
 	}
 	console.log('SESSION EXPIRED, RELOGGING.');
 	clientSteam.relog();
+	setTimeout(function() {
+		session_expire_login = false;
+	}, 5500);
 });
 
 function capitalize_first(string) {
