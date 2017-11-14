@@ -386,7 +386,7 @@ client.on('message', msg => {
 			embed
 				.addField(`${config.prefix}query <stmt>`, 'Executes a statement and returns data. Don\'t fuck around with delete statements, THEY WILL SCREW UP THE BOT.')
 		}
-		embed.addField('Bot created by', 'Maze & Extra');
+		embed.setFooter('Bot created by Maze & Extra');
 		msg.channel.send(embed);
 
 	}
