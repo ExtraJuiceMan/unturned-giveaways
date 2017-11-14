@@ -149,13 +149,13 @@ function capitalize_first(string) {
 
 function inventory_contents(callback) {
 	try {
-		manager.getUserInventoryContents(steamID, 304930, 2, true, function(err, inv, cur) {
+		manager.getInventoryContents(304930, 2, true, function(err, inv) {
+			callback(inv);
 			if (err) {
 				console.log(err);
 			}
-			callback(inv);
 		});
-	} catch (err) {
+	} catch (error) {
 		callback(null);
 	}
 }
@@ -417,10 +417,10 @@ client.on('guildMemberRemove', usr => {
 		if (exists) {
 			remove_user(usr.id);
 		}
-		else{
+		else {
 			return;
 		}
-	})
+	});
 });
 
 client.on('message', msg => {
@@ -491,7 +491,7 @@ client.on('message', msg => {
 			.addField(`${config.prefix}seturl <url>`, "Use this to add/update your trade URL!")
 			.addField(`${config.prefix}removeurl`, "Removes your trade URL from our database. Removes you from the giveaway entry list if you are entered.")
 			.addField(`${config.prefix}cede`, "Removes you from the giveaway entry list.")
-			.addField(`${config.prefix}botitems`, "Shows items up for grabs.");
+			.addField(`${config.prefix}botitems`, "Shows items up for grabs.")
 			.addField(`${config.prefix}mystatus`, "Checks if you are entered in the current giveaway or not.")
 			.addField(`${config.prefix}mytradurl`, "Displays your trade URL, if you have one added.")
 			.addField(`${config.prefix}info`, "Information about this bot.");
