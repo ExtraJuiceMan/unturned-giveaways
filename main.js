@@ -97,7 +97,7 @@ clientSteam.on("friendMessage", function(steamID, msg) {
 								return item.type.includes(capitalize_first(type));
 							});
 							ask_items(steamID, sort_items);
-						})
+						});
 					} catch (err) {
 						console.log(err);
 						clientSteam.chatMessage(steamID, "Sorry, but I failed to get your invmentory content! :(")
@@ -145,6 +145,19 @@ community.on('sessionExpired', function(err) {
 
 function capitalize_first(string) {
 	return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
+function inventory_contents(callback) {
+	try {
+		manager.getUserInventoryContents(steamID, 304930, 2, true, function(err, inv, cur) {
+			if (err) {
+				console.log(err);
+			}
+			callback(inv);
+		});
+	} catch (err) {
+		callback(null);
+	}
 }
 
 function insert_user(id) {
@@ -399,6 +412,17 @@ client.on('messageReactionAdd', (reaction, user) => {
 	});
 });
 
+client.on('guildMemberRemove', usr => {
+	entry_exists(usr.id, function(exists) {
+		if (exists) {
+			remove_user(usr.id);
+		}
+		else{
+			return;
+		}
+	})
+});
+
 client.on('message', msg => {
 
 	if (msg.author.bot) {
@@ -467,6 +491,7 @@ client.on('message', msg => {
 			.addField(`${config.prefix}seturl <url>`, "Use this to add/update your trade URL!")
 			.addField(`${config.prefix}removeurl`, "Removes your trade URL from our database. Removes you from the giveaway entry list if you are entered.")
 			.addField(`${config.prefix}cede`, "Removes you from the giveaway entry list.")
+			.addField(`${config.prefix}botitems`, "Shows items up for grabs.");
 			.addField(`${config.prefix}mystatus`, "Checks if you are entered in the current giveaway or not.")
 			.addField(`${config.prefix}mytradurl`, "Displays your trade URL, if you have one added.")
 			.addField(`${config.prefix}info`, "Information about this bot.");
@@ -583,6 +608,30 @@ client.on('message', msg => {
 		});
 	}
 
+	if (command == 'botitems') {
+		inventory_contents(function(items) {
+			var embed = new Discord.RichEmbed()
+				.setTitle('Bot Items')
+				.setDescription('These are the items up for grabs.')
+				.addField('Common', items.filter(function(item) {
+					return item.type.includes('Common ');
+				}).length)
+				.addField('Uncommon', items.filter(function(item) {
+					return item.type.includes('Uncommon ');
+				}).length)
+				.addField('Rare', items.filter(function(item) {
+					return item.type.includes('Rare ');
+				}).length)
+				.addField('Premium', items.filter(function(item) {
+					return item.type.includes('Premium ');
+				}).length)
+				.addField('Mythical', items.filter(function(item) {
+					return item.type.includes('Mythical ');
+				}).length)
+			msg.author.send(embed)
+		});
+	}
+
 	if (command == 'cede') {
 		entry_exists(msg.author.id, function(exists) {
 			if (exists) {
@@ -601,7 +650,6 @@ client.on('message', msg => {
 			}
 		});
 	}
-
 });
 
 // Update game status
@@ -618,25 +666,22 @@ var status_j = schedule.scheduleJob('*/5 * * * *', function() {
 var loggedin_j = schedule.scheduleJob('55 * * * *', function() {
 	check_time = new Date().toLocaleString();
 	console.log(check_time + ' Checking to see if we are logged in...');
-	community.loggedIn(function (err, logged, family) {
+	community.loggedIn(function(err, logged, family) {
 		if (err) {
 			console.log(err);
 		}
 		if (loggedIn) {
 			console.log('We are logged in, all is good.');
-		}
-		else {
+		} else {
 			console.log('NOT LOGGED IN, RELOGGING.');
-			if (!session_expire_login) {
-				clientSteam.relog();
-			}
+			clientSteam.relog();
 		}
 	});
 });
 
 // Send prize, update giveaway messages.
 var j = schedule.scheduleJob({
-	hour: 15,
+	hour: 16,
 	minute: 01
 }, function() {
 	console.log('Winner picked. Next giveaway beginning.');
