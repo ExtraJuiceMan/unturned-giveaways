@@ -138,7 +138,7 @@ function random(arr, count) {
 	return shuffled.slice(min);
 }
 
-function send_prize(url, callback) {
+function send_prize(url) {
 	manager.getInventoryContents(304930, 2, true, function(err, inventory) {
 		if (err) {
 			console.log(err);
@@ -184,6 +184,77 @@ function send_prize(url, callback) {
 				User.send(embed);
 				clientSteam.relog();
 			});
+		}
+	});
+}
+
+// Functions w/ callbacks
+function latest_giveaway(callback) {
+	db.get("SELECT CAST(msgid AS TEXT) AS msgid FROM giveaways WHERE id = (SELECT MAX(id) FROM giveaways);", function(err, row) {
+		if (row) {
+			callback(row.msgid);
+		} else {
+			callback(null);
+		}
+	});
+}
+
+function entry_exists(id, callback) {
+	db.get("SELECT * FROM entries WHERE id = ?", id, function(err, row) {
+		var exists = false;
+		if (row) {
+			exists = true;
+		}
+		callback(exists);
+	});
+}
+
+function user_exists(id, callback) {
+	db.get("SELECT * FROM users WHERE id = ?", id, function(err, row) {
+		var exists = false;
+		if (row) {
+			exists = true;
+		}
+		callback(exists);
+	});
+}
+
+function get_url(id, callback) {
+	db.get("SELECT * FROM users WHERE id = ?", id, function(err, row) {
+		if (!row) {
+			callback(null);
+		} else {
+			callback(row.url);
+		}
+	});
+}
+
+function url_exists(tradeurl, callback) {
+	db.get("SELECT * FROM users WHERE url = ?", tradeurl, function(err, row) {
+		var exists = false;
+		if (row) {
+			exists = true;
+		}
+		callback(exists);
+	});
+}
+
+function select_winner(callback) {
+	db.get("SELECT CAST(id AS TEXT) AS id FROM entries ORDER BY RANDOM() LIMIT 1;", function(err, row) {
+		if (row) {
+			callback(row.id);
+		} else {
+			callback(null);
+		}
+	});
+}
+
+function number_entrants(callback) {
+	db.get("SELECT COUNT(*) FROM entries", function(err, row) {
+		if (row) {
+			callback(row['COUNT(*)']);
+		} else {
+			callback(null);
 		}
 	});
 }
@@ -444,6 +515,7 @@ client.on('message', msg => {
 
 });
 
+// Update game status
 var status_j = schedule.scheduleJob('*/5 * * * *', function() {
 	number_entrants(function(count) {
 		if (count) {
@@ -454,13 +526,12 @@ var status_j = schedule.scheduleJob('*/5 * * * *', function() {
 	});
 });
 
+// Send prize, update giveaway messages.
 var j = schedule.scheduleJob({
 	hour: 15,
 	minute: 01
 }, function() {
 	console.log('Winner picked. Next giveaway beginning.');
-	// Don't worry about this - it just selects at random for you.
-	// var winner is the winner's ID; winner is null if no entrants.
 	select_winner(function(winner) {
 		var giveaway_embed = new Discord.RichEmbed()
 			.setTitle('Daily Giveaway')
@@ -550,75 +621,4 @@ var j = schedule.scheduleJob({
 		}
 	});
 });
-
-// Callbacks
-function latest_giveaway(callback) {
-	db.get("SELECT CAST(msgid AS TEXT) AS msgid FROM giveaways WHERE id = (SELECT MAX(id) FROM giveaways);", function(err, row) {
-		if (row) {
-			callback(row.msgid);
-		} else {
-			callback(null);
-		}
-	});
-}
-
-function entry_exists(id, callback) {
-	db.get("SELECT * FROM entries WHERE id = ?", id, function(err, row) {
-		var exists = false;
-		if (row) {
-			exists = true;
-		}
-		callback(exists);
-	});
-}
-
-function user_exists(id, callback) {
-	db.get("SELECT * FROM users WHERE id = ?", id, function(err, row) {
-		var exists = false;
-		if (row) {
-			exists = true;
-		}
-		callback(exists);
-	});
-}
-
-function get_url(id, callback) {
-	db.get("SELECT * FROM users WHERE id = ?", id, function(err, row) {
-		if (!row) {
-			callback(null);
-		} else {
-			callback(row.url);
-		}
-	});
-}
-
-function url_exists(tradeurl, callback) {
-	db.get("SELECT * FROM users WHERE url = ?", tradeurl, function(err, row) {
-		var exists = false;
-		if (row) {
-			exists = true;
-		}
-		callback(exists);
-	});
-}
-
-function select_winner(callback) {
-	db.get("SELECT CAST(id AS TEXT) AS id FROM entries ORDER BY RANDOM() LIMIT 1;", function(err, row) {
-		if (row) {
-			callback(row.id);
-		} else {
-			callback(null);
-		}
-	});
-}
-
-function number_entrants(callback) {
-	db.get("SELECT COUNT(*) FROM entries", function(err, row) {
-		if (row) {
-			callback(row['COUNT(*)']);
-		} else {
-			callback(null);
-		}
-	});
-}
 client.login(config.token);
