@@ -270,10 +270,10 @@ function send_prize(url) {
 							return;
 						} else {
 							console.log("Offer confirmed, relogging.");
+							clientSteam.relog();
 						}
 					});
 				}
-				clientSteam.relog();
 			});
 
 		} catch (err) {
@@ -670,7 +670,7 @@ var loggedin_j = schedule.scheduleJob('55 * * * *', function() {
 		if (err) {
 			console.log(err);
 		}
-		if (loggedIn) {
+		if (logged) {
 			console.log('We are logged in, all is good.');
 		} else {
 			console.log('NOT LOGGED IN, RELOGGING.');
@@ -689,7 +689,7 @@ var j = schedule.scheduleJob({
 		var giveaway_embed = new Discord.RichEmbed()
 			.setTitle('Daily Giveaway')
 			.setDescription('\nEvery 24 hours, a random amount of items is given to a randomly selected winner. These items can be *rare* or even *MEGA-RARE* quality. The process is completely automated.')
-			.addField('What should I know before entering? >*IMPORTANT*<', 'You have to have a trade URL set with the bot before entering the giveaway. Send the set trade URL command to the bot **in a DM** to register your trade URL.\n\nCommand Usage:\n``g>seturl https://mytradeurl.here``')
+			.addField('What should I know before entering? >*IMPORTANT*<', 'You have to have a trade URL set with the bot before entering the giveaway. Send the set trade URL command to the bot **in a DM** to register your trade URL. **Your entry will not be considered if you leave the server.**\n\nCommand Usage:\n``g>seturl https://mytradeurl.here``')
 			.addField('Where can I find my trade URL?', 'https://steamcommunity.com/id/me/tradeoffers/privacy#trade_offer_access_url')
 			.addField('How do I know if I have successfully entered?', 'The bot will DM you on a successful entry; if it doesn\'t, then something went wrong and your entry wasn\'t acknowledged. Please make sure that server DMs are enabled. You can re-react at a later time if your entry failed.')
 			.addField('What if I want to remove my trade URL or leave the giveaway?', '``g>help`` for more information regarding those operations. **The bot will only respond to commands in a DM.**')
