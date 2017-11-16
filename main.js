@@ -747,22 +747,7 @@ var j = schedule.scheduleJob({
 					var current_time = new Date().toLocaleString();
 					var mass_dm = new Discord.RichEmbed()
 						.setTitle('The giveaway has ended!')
-						.setDescription('For another chance to win, navigate back to our giveaway channel and enter again!\n\n You have chance to win random amount of these items:');
-						.addField('Common', items.filter(function(item) {
-							return item.type.includes('Common ');
-						}).length)
-						.addField('Uncommon', items.filter(function(item) {
-							return item.type.includes('Uncommon ');
-						}).length)
-						.addField('Rare', items.filter(function(item) {
-							return item.type.includes('Rare ');
-						}).length)
-						.addField('Premium', items.filter(function(item) {
-							return item.type.includes('Premium ');
-						}).length)
-						.addField('Mythical', items.filter(function(item) {
-							return item.type.includes('Mythical ');
-						}).length)
+						.setDescription('For another chance to win, navigate back to our giveaway channel and enter again!\nYou can get a list of all items up for grabs with ``g>botitems``.');
 					var embed = new Discord.RichEmbed()
 						.setTitle(`Daily Giveaway`)
 						.setDescription(`This giveaway has ended.`)
