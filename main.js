@@ -96,6 +96,10 @@ clientSteam.on("friendMessage", function(steamID, msg) {
 							var sort_items = playerinv.filter(function(item) {
 								return item.type.includes(capitalize_first(type));
 							});
+							if (sort_items.length == 0) {
+								clientSteam.chatMessage(steamID, "You do not have any of those items to trade.");
+								return;
+							}
 							ask_items(steamID, sort_items);
 						});
 					} catch (err) {
@@ -561,7 +565,6 @@ client.on('message', msg => {
 				console.log(err);
 				msg.channel.send("Exception. Please make sure that your statement is valid.")
 			}
-
 		} else {
 			return;
 		}
