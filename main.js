@@ -10,7 +10,8 @@ const config = require("./config.json");
 const db = new sqlite3.Database('./data.db');
 
 const ITEM_TYPES = ["common", "premium", "mythical", "rare", "uncommon"];
-var session_expire_login = false;
+var session_expire_login = 0;
+var giveaway_time_check = 0;
 
 db.serialize(function() {
 	db.run("CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY, url TEXT)");
@@ -133,18 +134,16 @@ manager.on('newOffer', (offer) => {
 });
 
 community.on('sessionExpired', function(err) {
-	if (session_expire_login) {
+	if (Date.now() - session_expire_login < 5000) {
+		console.log("Session expired fired too fast");
 		return;
 	}
-	session_expire_login = true;
+	session_expire_login = Date.now();
 	if (err) {
 		console.log(err);
 	}
 	console.log('SESSION EXPIRED, RELOGGING.');
 	clientSteam.relog();
-	setTimeout(function() {
-		session_expire_login = false;
-	}, 5500);
 });
 
 function capitalize_first(string) {
@@ -273,8 +272,7 @@ function send_prize(url) {
 							console.log('Offer was not accepted, error.')
 							return;
 						} else {
-							console.log("Offer confirmed, relogging.");
-							clientSteam.relog();
+							console.log("Offer confirmed.");
 						}
 					});
 				}
@@ -420,8 +418,7 @@ client.on('guildMemberRemove', usr => {
 	entry_exists(usr.id, function(exists) {
 		if (exists) {
 			remove_user(usr.id);
-		}
-		else {
+		} else {
 			return;
 		}
 	});
@@ -570,6 +567,49 @@ client.on('message', msg => {
 		}
 	}
 
+	if (command == 'checkreactions') {
+		// If the bot is offline for an extended period of time and we need to recheck reactions
+		if (config.ownerID.includes(msg.author.id)) {
+			latest_giveaway(function(msgid) {
+				client.channels.get(config.channel_id).fetchMessage(msgid)
+					.then(message => {
+						var reactions = message.reactions;
+						check_reaction = reactions.find(function(r) {
+							return r.emoji.name == '✅';
+						});
+						check_reaction.fetchUsers().then(users => {
+							users.forEach(function(user) {
+								db.get("SELECT * FROM entries WHERE id = ?", user.id, function(err, row) {
+									user_exists(user.id, function(user_exists) {
+										// Check if user exists in url table
+										if (!user_exists) {
+											return;
+										}
+										// Enter giveaway if row does not exist
+										if (!row) {
+											insert_user(user.id);
+											console.log("inserted: " + user.id);
+										}
+									});
+								});
+							});
+						});
+					});
+			});
+		} else {
+			return;
+		}
+	}
+
+	if (command == 'forcesend') {
+		// Command to ensure that bot's trading portions are working
+		if (config.ownerID.includes(msg.author.id)) {
+			send_prize(args[0]);
+		} else {
+			return;
+		}
+	}
+
 	if (command == 'total') {
 		number_entrants(function(number) {
 			var embed = new Discord.RichEmbed()
@@ -682,11 +722,25 @@ var loggedin_j = schedule.scheduleJob('55 * * * *', function() {
 	});
 });
 
+var relog_j = schedule.scheduleJob({
+	hour: 15,
+	minute: 55
+}, function() {
+	// Maze likes to log into the bot, so this is to make sure that
+	// we don't get a session replaced error when we send the trade.
+	console.log('Relogging before picking winner...');
+	clientSteam.relog();
+});
 // Send prize, update giveaway messages.
 var j = schedule.scheduleJob({
 	hour: 16,
 	minute: 01
 }, function() {
+	if (Date.now() - giveaway_time_check < 5000) {
+		console.log("Double giveaway, canceling task.");
+		return;
+	}
+	giveaway_time_check = Date.now();
 	console.log('Winner picked. Next giveaway beginning.');
 	select_winner(function(winner) {
 		var giveaway_embed = new Discord.RichEmbed()
