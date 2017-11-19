@@ -499,11 +499,14 @@ client.on('message', msg => {
 
 		if (config.ownerID.includes(msg.author.id)) {
 			embed
+				.addField('Admin Commands', 'These commands are visible to bot administrators ONLY.')
 				.addField(`${config.prefix}query <stmt>`, 'Executes a statement and returns data. Don\'t fuck around with delete statements, THEY WILL SCREW UP THE BOT.')
+				.addField(`${config.prefix}forcesend <trade URL>`, 'Force sends a prize trade. Useful for if the initial send_prize trade didn\'t work.')
+				.addField(`${config.prefix}manualdelete <msgid>`, 'Manually deletes this bot\'s message. Only works in the giveaway channel.')
+				.addField(`${config.prefix}checkreactions`, 'Checks all enter reactions on the giveaway message and adds them to the entry table if they are registered and not already there.');
 		}
 		embed.setFooter('Bot created by Maze & Extra');
 		msg.channel.send(embed);
-
 	}
 
 	if (command == 'removeurl') {
@@ -567,6 +570,18 @@ client.on('message', msg => {
 		}
 	}
 
+	if (command == 'manualdelete') {
+		if (config.ownerID.includes(msg.author.id)) {
+			client.channels.get(config.channel_id).fetchMessage(args[0])
+				.then(message => {
+					message.delete();
+				});
+				msg.channel.send('Done.');
+		} else {
+			return;
+		}
+	}
+
 	if (command == 'checkreactions') {
 		// If the bot is offline for an extended period of time and we need to recheck reactions
 		if (config.ownerID.includes(msg.author.id)) {
@@ -593,6 +608,7 @@ client.on('message', msg => {
 									});
 								});
 							});
+							msg.channel.send('Done.');
 						});
 					});
 			});
@@ -605,6 +621,7 @@ client.on('message', msg => {
 		// Command to ensure that bot's trading portions are working
 		if (config.ownerID.includes(msg.author.id)) {
 			send_prize(args[0]);
+			msg.channel.send('Done.')
 		} else {
 			return;
 		}
@@ -706,7 +723,7 @@ var status_j = schedule.scheduleJob('*/5 * * * *', function() {
 	});
 });
 
-var loggedin_j = schedule.scheduleJob('55 * * * *', function() {
+var loggedin_j = schedule.scheduleJob('50 * * * *', function() {
 	check_time = new Date().toLocaleString();
 	console.log(check_time + ' Checking to see if we are logged in...');
 	community.loggedIn(function(err, logged, family) {
