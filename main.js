@@ -12,6 +12,8 @@ const db = new sqlite3.Database('./data.db');
 const ITEM_TYPES = ["common", "premium", "mythical", "rare", "uncommon"];
 var session_expire_login = 0;
 var giveaway_time_check = 0;
+var not_eligible_cooldown = {};
+var no_tradeurl_cooldown = {};
 
 db.serialize(function() {
 	db.run("CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY, url TEXT)");
@@ -399,6 +401,12 @@ client.on('messageReactionAdd', (reaction, user) => {
 			user_exists(user.id, function(user_exists) {
 				// Check if user exists in url table
 				if (!user_exists) {
+					if (no_tradeurl_cooldown[user.id]){
+						if (Date.now() - no_tradeurl_cooldown[user.id] < 15000) {
+							return;
+						}
+					}
+					no_tradeurl_cooldown[user.id] = Date.now();
 					var embed = new Discord.RichEmbed()
 						.setTitle(`Entry Failed.`)
 						.setColor(0xFF0000)
@@ -410,7 +418,17 @@ client.on('messageReactionAdd', (reaction, user) => {
 				if (!row) {
 					db.get("SELECT * FROM (SELECT * FROM giveaways ORDER BY id DESC LIMIT 4 OFFSET 1) WHERE winner = ?", user.id, function(err, row) {
 						if (row) {
-							return;
+							if (not_eligible_cooldown[user.id]){
+								if (Date.now() - not_eligible_cooldown[user.id] < 15000) {
+									return;
+								}
+							}
+							not_eligible_cooldown[user.id] = Date.now();
+							var embed = new Discord.RichEmbed()
+								.setTitle(`Entry Failed.`)
+								.setColor(0xFF0000)
+								.setDescription("You have won one of the last four giveaways. Give somebody else a chance to win. Check back four days after your win date to enter again!")
+							user.send(embed);
 						} else {
 							insert_user(user.id);
 							var embed = new Discord.RichEmbed()
