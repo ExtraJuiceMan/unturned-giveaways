@@ -401,7 +401,7 @@ client.on('messageReactionAdd', (reaction, user) => {
 			user_exists(user.id, function(user_exists) {
 				// Check if user exists in url table
 				if (!user_exists) {
-					if (no_tradeurl_cooldown[user.id]){
+					if (no_tradeurl_cooldown[user.id]) {
 						if (Date.now() - no_tradeurl_cooldown[user.id] < 15000) {
 							return;
 						}
@@ -418,7 +418,7 @@ client.on('messageReactionAdd', (reaction, user) => {
 				if (!row) {
 					db.get("SELECT * FROM (SELECT * FROM giveaways ORDER BY id DESC LIMIT 4 OFFSET 1) WHERE winner = ?", user.id, function(err, row) {
 						if (row) {
-							if (not_eligible_cooldown[user.id]){
+							if (not_eligible_cooldown[user.id]) {
 								if (Date.now() - not_eligible_cooldown[user.id] < 15000) {
 									return;
 								}
@@ -430,12 +430,28 @@ client.on('messageReactionAdd', (reaction, user) => {
 								.setDescription("You have won one of the last four giveaways. Give somebody else a chance to win. Check back four days after your win date to enter again!")
 							user.send(embed);
 						} else {
-							insert_user(user.id);
-							var embed = new Discord.RichEmbed()
-								.setTitle(`Entry Success!`)
-								.setColor(0x00FF00)
-								.setDescription("You have successfully entered the daily giveaway!" + "\n\nUse `" + config.prefix + "help `" + "for more info")
-							user.send(embed);
+							reaction.message.guild.fetchMember(user).then(function(member) {
+								if (!member.roles.find(e => e.name == '1-10')) {
+									if (not_eligible_cooldown[user.id]) {
+										if (Date.now() - not_eligible_cooldown[user.id] < 15000) {
+											return;
+										}
+									}
+									not_eligible_cooldown[user.id] = Date.now();
+									var embed = new Discord.RichEmbed()
+										.setTitle(`Entry Failed.`)
+										.setColor(0xFF0000)
+										.setDescription("You are not eligible to enter this giveaway because you do not have the **1-10** role. Talk in our General channel and get to level 1 to enter the giveaway. It only takes a couple of messages!")
+									user.send(embed);
+								} else {
+									insert_user(user.id);
+									var embed = new Discord.RichEmbed()
+										.setTitle(`Entry Success!`)
+										.setColor(0x00FF00)
+										.setDescription("You have successfully entered the daily giveaway!" + "\n\nUse `" + config.prefix + "help `" + "for more info")
+									user.send(embed);
+								}
+							});
 						}
 					});
 				}
@@ -606,7 +622,7 @@ client.on('message', msg => {
 				.then(message => {
 					message.delete();
 				});
-				msg.channel.send('Done.');
+			msg.channel.send('Done.');
 		} else {
 			return;
 		}
@@ -798,7 +814,8 @@ var j = schedule.scheduleJob({
 			.addField('How do I know if I have successfully entered?', 'The bot will DM you on a successful entry; if it doesn\'t, then something went wrong and your entry wasn\'t acknowledged. Please make sure that server DMs are enabled. You can re-react at a later time if your entry failed.')
 			.addField('What if I want to remove my trade URL or leave the giveaway?', '``g>help`` for more information regarding those operations. **The bot will only respond to commands in a DM.**')
 			.addField('When does this giveaway end?', 'Do you see the timestamp at the bottom of this message? It ends at the same time on the next day.')
-			.addField('How is the winner selected?', 'The winner is selected by an ORDER BY RANDOM() query to the entry database. It is completely random. The winners of the last four giveaways will not be able to enter the most recent one.')
+			.addField('Is there anything that makes me ineligible to enter?', '- If you have won a giveaway in the past four days\n- If you are not in the **1-10** role which you can gain by talking.')
+			.addField('How is the winner selected?', 'The winner is selected by an ORDER BY RANDOM() query to the entry database. It is completely random.')
 			.addField('\u200B', '__*Please read this embed in it\'s entirety before entering.*__\n\n**React with  ✅  to enter the giveaway!**')
 			.setFooter('Unturned Giveaway Bot by Maze and Extra')
 			.setThumbnail('https://i.imgur.com/LBUxMrF.png')
