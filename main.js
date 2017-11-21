@@ -16,7 +16,7 @@ var giveaway_time_check = 0;
 db.serialize(function() {
 	db.run("CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY, url TEXT)");
 	db.run("CREATE TABLE IF NOT EXISTS entries(id INTEGER PRIMARY KEY)");
-	db.run("CREATE TABLE IF NOT EXISTS giveaways(id INTEGER PRIMARY KEY, msgid INTEGER)");
+	db.run("CREATE TABLE IF NOT EXISTS giveaways(id INTEGER PRIMARY KEY, msgid INTEGER, winner INTEGER)");
 });
 
 var clientSteam = new SteamUser();
@@ -181,6 +181,12 @@ function insert_giveaway(id) {
 	stmt.finalize();
 }
 
+function update_giveaway(row_id, winner) {
+	var stmt = db.prepare('UPDATE giveaways SET winner = ? WHERE id = ?');
+	stmt.run(winner, row_id);
+	stmt.finalize();
+}
+
 function insert_tradeurl(id, tradeurl) {
 	var stmt = db.prepare('INSERT INTO users VALUES (?, ?)');
 	stmt.run(id, tradeurl);
@@ -294,11 +300,11 @@ function send_prize(url) {
 
 // Functions w/ callbacks
 function latest_giveaway(callback) {
-	db.get("SELECT CAST(msgid AS TEXT) AS msgid FROM giveaways WHERE id = (SELECT MAX(id) FROM giveaways);", function(err, row) {
+	db.get("SELECT CAST(msgid AS TEXT) AS msgid, id FROM giveaways WHERE id = (SELECT MAX(id) FROM giveaways);", function(err, row) {
 		if (row) {
-			callback(row.msgid);
+			callback(row.msgid, row.id);
 		} else {
-			callback(null);
+			callback(null, null);
 		}
 	});
 }
@@ -369,7 +375,7 @@ client.on('ready', () => {
 	console.log(new Date().toLocaleString());
 	console.log(`Ready to serve in ${client.channels.size} channels on ${client.guilds.size} servers, for a total of ${client.users.size} users.`);
 	client.user.setGame("g>help | free stuff1!111!", "https://www.twitch.tv/Courierfive")
-	latest_giveaway(function(msgid) {
+	latest_giveaway(function(msgid, row_id) {
 		console.log('Resuming giveaway ID #' + msgid);
 		client.channels.get(config.channel_id).fetchMessage(msgid);
 	});
@@ -385,7 +391,7 @@ client.on('messageReactionAdd', (reaction, user) => {
 	if (reaction.emoji.name != "✅") {
 		return;
 	}
-	latest_giveaway(function(msgid) {
+	latest_giveaway(function(msgid, row_id) {
 		if (reaction.message.id != msgid) {
 			return;
 		}
@@ -402,12 +408,18 @@ client.on('messageReactionAdd', (reaction, user) => {
 				}
 				// Enter giveaway if row does not exist
 				if (!row) {
-					insert_user(user.id);
-					var embed = new Discord.RichEmbed()
-						.setTitle(`Entry Success!`)
-						.setColor(0x00FF00)
-						.setDescription("You have successfully entered the daily giveaway!" + "\n\nUse `" + config.prefix + "help `" + "for more info")
-					user.send(embed);
+					db.get("SELECT * FROM (SELECT * FROM giveaways ORDER BY id DESC LIMIT 4 OFFSET 1) WHERE winner = ?", user.id, function(err, row) {
+						if (row) {
+							return;
+						} else {
+							insert_user(user.id);
+							var embed = new Discord.RichEmbed()
+								.setTitle(`Entry Success!`)
+								.setColor(0x00FF00)
+								.setDescription("You have successfully entered the daily giveaway!" + "\n\nUse `" + config.prefix + "help `" + "for more info")
+							user.send(embed);
+						}
+					});
 				}
 			});
 		});
@@ -585,7 +597,7 @@ client.on('message', msg => {
 	if (command == 'checkreactions') {
 		// If the bot is offline for an extended period of time and we need to recheck reactions
 		if (config.ownerID.includes(msg.author.id)) {
-			latest_giveaway(function(msgid) {
+			latest_giveaway(function(msgid, row_id) {
 				client.channels.get(config.channel_id).fetchMessage(msgid)
 					.then(message => {
 						var reactions = message.reactions;
@@ -768,7 +780,7 @@ var j = schedule.scheduleJob({
 			.addField('How do I know if I have successfully entered?', 'The bot will DM you on a successful entry; if it doesn\'t, then something went wrong and your entry wasn\'t acknowledged. Please make sure that server DMs are enabled. You can re-react at a later time if your entry failed.')
 			.addField('What if I want to remove my trade URL or leave the giveaway?', '``g>help`` for more information regarding those operations. **The bot will only respond to commands in a DM.**')
 			.addField('When does this giveaway end?', 'Do you see the timestamp at the bottom of this message? It ends at the same time on the next day.')
-			.addField('How is the winner selected?', 'The winner is selected by an ORDER BY RANDOM() query to the entry database. It is completely random.')
+			.addField('How is the winner selected?', 'The winner is selected by an ORDER BY RANDOM() query to the entry database. It is completely random. The winners of the last four giveaways will not be able to enter the most recent one.')
 			.addField('\u200B', '__*Please read this embed in it\'s entirety before entering.*__\n\n**React with  ✅  to enter the giveaway!**')
 			.setFooter('Unturned Giveaway Bot by Maze and Extra')
 			.setThumbnail('https://i.imgur.com/LBUxMrF.png')
@@ -780,7 +792,7 @@ var j = schedule.scheduleJob({
 				.setColor(0x36393e)
 				.setDescription('It seems like nobody entered the giveaway. Oh well.');
 			client.channels.get(config.channel_id).send(nobody_embed).then(message => message.delete(300000));
-			latest_giveaway(function(previous_id) {
+			latest_giveaway(function(previous_id, row_id) {
 				var current_time = new Date().toLocaleString();
 				var embed = new Discord.RichEmbed()
 					.setTitle(`Daily Giveaway`)
@@ -809,12 +821,14 @@ var j = schedule.scheduleJob({
 			get_url(winner, function(url) {
 				var embed = new Discord.RichEmbed()
 					.setTitle("You won!")
-					.setDescription(`Congratulations, you won the giveaway!\nI'll send you your items using this trade url: ${url}.`)
+					.setDescription(`Congratulations, you won the giveaway!\nI'll send your your items using the trade URL you supplied.`)
+					.addField('Trade URL', url)
+					.addField('Notice:', '**You will not be able to enter the next four giveaways**. Give somebody else a chance to win. Check back in four days and you\'ll be able to enter again!')
 					.setColor(0x00FF00)
 				client.fetchUser(winner).then((User) => {
 					User.send(embed);
 				});
-				latest_giveaway(function(previous_id) {
+				latest_giveaway(function(previous_id, row_id) {
 					var current_time = new Date().toLocaleString();
 					var mass_dm = new Discord.RichEmbed()
 						.setTitle('The giveaway has ended!')
@@ -828,15 +842,16 @@ var j = schedule.scheduleJob({
 						.then(message => {
 							message.edit(embed);
 						});
-					db.each("SELECT CAST(id AS TEXT) AS id FROM entries", function(err, row) {
+					db.each("SELECT CAST(id AS TEXT) AS uid FROM entries WHERE id != ?", winner, function(err, row) {
 						if (row) {
-							client.fetchUser(row.id).then((User) => {
+							client.fetchUser(row.uid).then((User) => {
 								User.send(mass_dm);
 							});
 						}
 					}, function(err, num_rows) {
 						console.log('Sent mass DM to ' + num_rows + ' entrants.');
 						clear_entries();
+						update_giveaway(row_id, winner);
 						client.channels.get(config.channel_id).send(giveaway_embed).then((m) => {
 							m.react("✅");
 							insert_giveaway(m.id);
