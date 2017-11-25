@@ -175,6 +175,11 @@ exports.GIVEAWAY = new Discord.RichEmbed()
 	.setColor(0x7F9184)
 	.setTimestamp();
 
+exports.NOBODY_ENTERED = new Discord.RichEmbed()
+	.setTitle("Nobody entered...")
+	.setColor(0x36393e)
+	.setDescription('It seems like nobody entered the giveaway. Oh well.');
+
 exports.SELECTED_WINNER = function(winner) {
 	var embed = new Discord.RichEmbed()
 		.setTitle("Daily Giveaway Results")
@@ -195,14 +200,19 @@ exports.WINNER_ALERT = function(url) {
 }
 
 exports.WINNER_EDIT = function(winner) {
-	var current_time = new Date().toLocaleString();
 	var embed = new Discord.RichEmbed()
 		.setTitle(`Daily Giveaway`)
 		.setDescription(`This giveaway has ended.`)
-		.addField(`End Date`, current_time + " (PST)")
+		.addField(`End Date`, new Date().toLocaleString() + " (PST)")
 		.addField(`Winner`, `<@${winner}>`)
 	return embed;
 }
+
+exports.WINNER_EDIT_NOBODY = new Discord.RichEmbed()
+	.setTitle(`Daily Giveaway`)
+	.setDescription(`This giveaway has ended.`)
+	.addField(`End Date`, new Date().toLocaleString() + " (PST)")
+	.addField(`Winner`, `None`)
 
 exports.TOTAL_ENTRANTS = function(number) {
 	var embed = new Discord.RichEmbed()

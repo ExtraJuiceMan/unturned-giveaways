@@ -81,7 +81,7 @@ clientSteam.on("friendMessage", function(steamID, msg) {
 			clientSteam.chatMessage(steamID, "Pong!");
 		}
 		if (command == 'help') {
-			clientSteam.chatMessage(steamID, `Hi! I'm a bot created by Maze. Avaiable commands: \n ${config.prefix}take <type> \nValid item types: Common, Rare, Premium, Mythical, Uncommon \n This command will take specific type of items from your invmentory`)
+			clientSteam.chatMessage(steamID, `Hi! I'm a bot created by Maze. Available commands: \n ${config.prefix}take <type> \nValid item types: Common, Rare, Premium, Mythical, Uncommon \n This command will take specific type of items from your invmentory`)
 		}
 		if (command == 'take') {
 			if (args.length == 0) {
@@ -720,21 +720,11 @@ var j = schedule.scheduleJob({
 	console.log('Winner picked. Next giveaway beginning.');
 	select_winner(function(winner) {
 		if (!winner) {
-			var nobody_embed = new Discord.RichEmbed()
-				.setTitle("Nobody entered...")
-				.setColor(0x36393e)
-				.setDescription('It seems like nobody entered the giveaway. Oh well.');
-			client.channels.get(config.channel_id).send(nobody_embed).then(message => message.delete(300000));
+			client.channels.get(config.channel_id).send(embeds.NOBODY_ENTERED).then(message => message.delete(300000));
 			latest_giveaway(function(previous_id, row_id) {
-				var current_time = new Date().toLocaleString();
-				var embed = new Discord.RichEmbed()
-					.setTitle(`Daily Giveaway`)
-					.setDescription(`This giveaway has ended.`)
-					.addField(`End Date`, current_time + " (PST)")
-					.addField(`Winner`, `None`)
 				client.channels.get(config.channel_id).fetchMessage(previous_id)
 					.then(message => {
-						message.edit(embed);
+						message.edit(embeds.WINNER_EDIT_NOBODY);
 						client.channels.get(config.channel_id).send(embeds.GIVEAWAY).then((m) => {
 							m.react("✅");
 							insert_giveaway(m.id);
