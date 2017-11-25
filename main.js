@@ -401,6 +401,7 @@ client.on('messageReactionAdd', (reaction, user) => {
 			user_exists(user.id, function(user_exists) {
 				// Check if user exists in url table
 				if (!user_exists) {
+					reaction.remove(user);
 					if (no_tradeurl_cooldown[user.id]) {
 						if (Date.now() - no_tradeurl_cooldown[user.id] < 15000) {
 							return;
@@ -418,6 +419,7 @@ client.on('messageReactionAdd', (reaction, user) => {
 				if (!row) {
 					db.get("SELECT * FROM (SELECT * FROM giveaways ORDER BY id DESC LIMIT 4 OFFSET 1) WHERE winner = ?", user.id, function(err, row) {
 						if (row) {
+							reaction.remove(user);
 							if (not_eligible_cooldown[user.id]) {
 								if (Date.now() - not_eligible_cooldown[user.id] < 15000) {
 									return;
@@ -432,6 +434,7 @@ client.on('messageReactionAdd', (reaction, user) => {
 						} else {
 							reaction.message.guild.fetchMember(user).then(function(member) {
 								if (!member.roles.find(e => e.name == '1-10')) {
+									reaction.remove(user);
 									if (not_eligible_cooldown[user.id]) {
 										if (Date.now() - not_eligible_cooldown[user.id] < 15000) {
 											return;
@@ -454,6 +457,17 @@ client.on('messageReactionAdd', (reaction, user) => {
 							});
 						}
 					});
+				} else {
+					if (not_eligible_cooldown[user.id]) {
+						if (Date.now() - not_eligible_cooldown[user.id] < 15000) {
+							return;
+						}
+					}
+					not_eligible_cooldown[user.id] = Date.now();
+					var embed = new Discord.RichEmbed()
+						.setTitle(`You are already entered.`)
+						.setDescription("You are already entered in the current giveaway. ``g>cede`` to unenter.")
+					user.send(embed);
 				}
 			});
 		});
@@ -667,6 +681,16 @@ client.on('message', msg => {
 		// Command to ensure that bot's trading portions are working
 		if (config.ownerID.includes(msg.author.id)) {
 			send_prize(args[0]);
+			msg.channel.send('Done.')
+		} else {
+			return;
+		}
+	}
+
+	if (command == 'sendmsg') {
+		// Force sends msg
+		if (config.ownerID.includes(msg.author.id)) {
+			client.channels.get(args[0]).send(args.slice(1, args.length - 1).join(" "));
 			msg.channel.send('Done.')
 		} else {
 			return;
