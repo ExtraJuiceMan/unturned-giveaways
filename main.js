@@ -699,7 +699,7 @@ var loggedin_j = schedule.scheduleJob('50 * * * *', function() {
 });
 
 var reminder_j = schedule.scheduleJob({
-	hour: 16,
+	hour: 17,
 	minute: 30,
 	dayOfWeek: 0
 }, function() {
