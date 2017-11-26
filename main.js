@@ -13,6 +13,7 @@ const embeds = require("./giveaway_embeds.js");
 const ITEM_TYPES = ["common", "premium", "mythical", "rare", "uncommon"];
 var session_expire_login = 0;
 var giveaway_time_check = 0;
+var reminder_time_check = 0;
 var not_eligible_cooldown = {};
 var no_tradeurl_cooldown = {};
 
@@ -703,6 +704,11 @@ var reminder_j = schedule.scheduleJob({
 	minute: 30,
 	dayOfWeek: 0
 }, function() {
+	if (Date.now() - reminder_time_check < 5000) {
+		console.log("Double reminder, canceling task.");
+		return;
+	}
+	reminder_time_check = Date.now();
 	console.log('Sending mass reminder DM...');
 	db.each("SELECT CAST(id AS TEXT) AS uid FROM users", function(err, row) {
 		if (row) {
