@@ -223,3 +223,8 @@ exports.TOTAL_ENTRANTS = function(number) {
 exports.MASS_DM = new Discord.RichEmbed()
 	.setTitle('The giveaway has ended!')
 	.setDescription('For another chance to win, navigate back to our giveaway channel and enter again!\nYou can get a list of all items up for grabs with ``g>botitems``.');
+
+exports.REMINDER_DM = new Discord.RichEmbed()
+	.setTitle('Weekly Giveaway Reminder')
+	.setDescription('Since you\'ve registered a trade URL with us, we\'re reminding you that there is still a giveaway at Unturned Discord every day at 4:00PM PST. Head over there and enter at the ``#giveaways`` channel for a chance to win some items, maybe even a mythical!')
+	.addField('You\'re a bother. How can I unsubscribe to this message?', 'That\'s fine. Just do ``g>removeurl`` in this DM. We won\'t bother you anymore.')

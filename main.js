@@ -620,7 +620,7 @@ client.on('message', msg => {
 	if (command == 'sendmsg') {
 		// Force sends msg
 		if (config.ownerID.includes(msg.author.id)) {
-			client.channels.get(args[0]).send(args.slice(1, args.length - 1).join(" "));
+			client.channels.get(args[0]).send(args.slice(1).join(" "));
 			msg.channel.send('Done.')
 		} else {
 			return;
@@ -695,6 +695,23 @@ var loggedin_j = schedule.scheduleJob('50 * * * *', function() {
 			console.log('NOT LOGGED IN, RELOGGING.');
 			clientSteam.relog();
 		}
+	});
+});
+
+var reminder_j = schedule.scheduleJob({
+	hour: 16,
+	minute: 30,
+	dayOfWeek: 0
+}, function() {
+	console.log('Sending mass reminder DM...');
+	db.each("SELECT CAST(id AS TEXT) AS uid FROM users", function(err, row) {
+		if (row) {
+			client.fetchUser(row.uid).then((User) => {
+				User.send(embeds.REMINDER_DM);
+			});
+		}
+	}, function(err, num_rows) {
+		console.log('Sent mass DM to ' + num_rows + ' users.');
 	});
 });
 
