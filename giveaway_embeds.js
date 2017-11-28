@@ -220,6 +220,11 @@ exports.TOTAL_ENTRANTS = function(number) {
 	return embed;
 }
 
+exports.PRIZE_FAIL = new Discord.RichEmbed()
+	.setTitle("Oh no!")
+	.setColor(0xFF0000)
+	.setDescription("Either your trade URL was invalid, or something went wrong on our end. The trade was not sent successfully.\n\n Please contact staff about this.")
+
 exports.MASS_DM = new Discord.RichEmbed()
 	.setTitle('The giveaway has ended!')
 	.setDescription('For another chance to win, navigate back to our giveaway channel and enter again!\nYou can get a list of all items up for grabs with ``g>botitems``.');

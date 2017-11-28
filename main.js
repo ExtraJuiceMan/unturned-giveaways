@@ -254,7 +254,7 @@ function ask_items(steamID, items_asked) {
 	});
 }
 
-function send_prize(url) {
+function send_prize(url, winner) {
 	manager.getInventoryContents(304930, 2, true, function(err, inventory) {
 		if (err) {
 			console.log(err);
@@ -292,12 +292,8 @@ function send_prize(url) {
 
 		} catch (err) {
 			console.log(`Couldn't send the trade because of ${err}!`);
-			var embed = new Discord.RichEmbed()
-				.setTitle("Oh no!")
-				.setColor(0xFF0000)
-				.setDescription("Either your trade URL was invalid, or something went wrong on our end. The trade was not sent successfully.\n\n Please contact staff about this.")
 			client.fetchUser(winner).then((User) => {
-				User.send(embed);
+				User.send(embeds.PRIZE_FAIL);
 				clientSteam.relog();
 			});
 		}
@@ -608,11 +604,46 @@ client.on('message', msg => {
 		}
 	}
 
+	if (command == 'sendreminders') {
+		// If the bot is offline for an extended period of time and we need to recheck reactions
+		if (config.ownerID.includes(msg.author.id)) {
+				client.channels.get(config.channel_id).fetchMessage(args[0])
+					.then(message => {
+						var reactions = message.reactions;
+						check_reaction = reactions.find(function(r) {
+							return r.emoji.name == '✅';
+						});
+						check_reaction.fetchUsers().then(users => {
+							users.forEach(function(user) {
+								if (!user.equals(client.user)) {
+									user.send(embeds.MASS_DM);
+								}
+							})
+							msg.channel.send('Done.');
+						});
+					});
+		} else {
+			return;
+		}
+	}
+
 	if (command == 'forcesend') {
 		// Command to ensure that bot's trading portions are working
 		if (config.ownerID.includes(msg.author.id)) {
-			send_prize(args[0]);
+			send_prize(args[0], args[1]);
 			msg.channel.send('Done.')
+		} else {
+			return;
+		}
+	}
+
+	if (command == 'sendgiveawayembed') {
+		// If we ever mess up the original giveaway embed
+		if (config.ownerID.includes(msg.author.id)) {
+			client.channels.get(config.channel_id).send(embeds.GIVEAWAY).then((m) => {
+				m.react("✅");
+				insert_giveaway(m.id);
+			});
 		} else {
 			return;
 		}
@@ -700,7 +731,7 @@ var loggedin_j = schedule.scheduleJob('50 * * * *', function() {
 });
 
 var reminder_j = schedule.scheduleJob({
-	hour: 17,
+	hour: 16,
 	minute: 30,
 	dayOfWeek: 0
 }, function() {
@@ -784,7 +815,7 @@ var j = schedule.scheduleJob({
 						});
 					});
 				});
-				send_prize(url);
+				send_prize(url, winner);
 			});
 		}
 	});
