@@ -484,6 +484,12 @@ client.on('message', msg => {
 			msg.author.send(embeds.URL_FAIL_INVALID_ARGS);
 			return;
 		}
+		if (args[0] == "https://mytradeurl.here")
+		{
+			// some people are not smart
+			msg.author.send("Use an actual trade url you retard");
+			return;
+		}
 		var tradeurl = args[0];
 		var match = tradeurl.startsWith('https://');
 		if (!match) {
@@ -605,7 +611,7 @@ client.on('message', msg => {
 	}
 
 	if (command == 'sendreminders') {
-		// If the bot is offline for an extended period of time and we need to recheck reactions
+		// If reminders fail to send
 		if (config.ownerID.includes(msg.author.id)) {
 				client.channels.get(config.channel_id).fetchMessage(args[0])
 					.then(message => {
