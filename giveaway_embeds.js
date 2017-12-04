@@ -117,7 +117,7 @@ exports.HELP = function(authorid) {
 		.addField(`${config.prefix}cede`, "Removes you from the giveaway entry list.")
 		.addField(`${config.prefix}botitems`, "Shows items up for grabs.")
 		.addField(`${config.prefix}mystatus`, "Checks if you are entered in the current giveaway or not.")
-		.addField(`${config.prefix}mytradurl`, "Displays your trade URL, if you have one added.")
+		.addField(`${config.prefix}mytradeurl`, "Displays your trade URL, if you have one added.")
 		.addField(`${config.prefix}info`, "Information about this bot.");
 
 	if (config.ownerID.includes(authorid)) {
