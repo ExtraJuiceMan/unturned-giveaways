@@ -484,7 +484,7 @@ client.on('message', msg => {
 			msg.author.send(embeds.URL_FAIL_INVALID_ARGS);
 			return;
 		}
-		if (args[0] == "https://mytradeurl.here")
+		if (args[0].indexOf("https://mytradeurl.here") > -1)
 		{
 			// some people are not smart
 			msg.author.send("Use an actual trade url you retard");
