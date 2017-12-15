@@ -17,6 +17,11 @@ exports.ENTRY_FAIL_RECENT_WINNER = new Discord.RichEmbed()
 	.setColor(0xFF0000)
 	.setDescription("You have won one of the last four giveaways. Give somebody else a chance to win. Check back four days after your win date to enter again!")
 
+exports.ENTRY_FAIL_BLACKLISTED = new Discord.RichEmbed()
+	.setTitle(`Entry Failed.`)
+	.setColor(0xFF0000)
+	.setDescription("You have been blacklisted. Check the with a staff member to see what you did wrong.")
+
 exports.ENTRY_FAIL_NO_URL = new Discord.RichEmbed()
 	.setTitle(`Entry Failed.`)
 	.setColor(0xFF0000)
