@@ -20,6 +20,7 @@ var no_tradeurl_cooldown = {};
 db.serialize(function() {
 	db.run("CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY, url TEXT)");
 	db.run("CREATE TABLE IF NOT EXISTS entries(id INTEGER PRIMARY KEY)");
+	db.run("CREATE TABLE IF NOT EXISTS blacklist(id INTEGER PRIMARY KEY, reason TEXT)");
 	db.run("CREATE TABLE IF NOT EXISTS giveaways(id INTEGER PRIMARY KEY, msgid INTEGER, winner INTEGER)");
 });
 
@@ -174,7 +175,11 @@ function insert_user(id) {
 	stmt.run(id)
 	stmt.finalize();
 }
-
+function addTo_blist(id, reason) {
+	var stmt = db.prepare('INSERT INTO blacklist VALUES (?,?)');
+	stmt.run(id)
+	stmt.finalize();
+}
 function remove_user(id) {
 	var stmt = db.prepare('DELETE FROM entries WHERE id = ?');
 	stmt.run(id)
@@ -340,6 +345,15 @@ function get_url(id, callback) {
 		}
 	});
 }
+function get_blacklist(id, callback) {
+	db.get("SELECT * FROM blacklist WHERE id = ?", id, function(err, row) {
+		if (!row) {
+			callback(null);
+		} else {
+			callback(row.id);
+		}
+	});
+}
 
 function url_exists(tradeurl, callback) {
 	db.get("SELECT * FROM users WHERE url = ?", tradeurl, function(err, row) {
@@ -397,6 +411,13 @@ client.on('messageReactionAdd', (reaction, user) => {
 		if (reaction.message.id != msgid) {
 			return;
 		}
+		db.get("SELECT * FROM blacklist WHERE id = ?", userblist.id, function(err, row) {
+			get_blacklist(userblist.id, function(get_blacklist) {
+				if(!get_blacklist) {
+					return; 
+				} else {
+					reaction.remove(user);
+				}
 		db.get("SELECT * FROM entries WHERE id = ?", user.id, function(err, row) {
 			user_exists(user.id, function(user_exists) {
 				// Check if user exists in url table
@@ -637,7 +658,16 @@ client.on('message', msg => {
 		// Command to ensure that bot's trading portions are working
 		if (config.ownerID.includes(msg.author.id)) {
 			send_prize(args[0], args[1]);
-			msg.channel.send('Done.')
+			msg.channel.send('Done.');
+		} else {
+			return;
+		}
+	}
+	if (command == 'ban') {
+		// Command to ban someone xdxd
+		if (config.ownerID.includes(msg.author.id)) {
+			addTo_blist(args[0], args[1]);
+			msg.channel.send('Done! banned: ' + args[0] + 'Reason: ' + args[1]);
 		} else {
 			return;
 		}
