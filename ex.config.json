@@ -7,5 +7,6 @@
   "identity_secret": "Steam Identity Secret",
   "channel_id": "Giveaway Channel ID",
   "offer_message": "You won these items:",
-  "ownerID": ["Discord", "IDs", "Here"]
+  "ownerID": ["Discord", "IDs", "Here"],
+  "owner_steam": ["Steam", "IDs", "Here"]
 }
