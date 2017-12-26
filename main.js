@@ -79,13 +79,6 @@ clientSteam.on("friendMessage", function(steamID, msg) {
 
 		console.log("Friend message from " + name + " [" + steamID + "]" + ": " + msg);
 
-		if (command == 'guard') {
-			if(config.owner_steam.includes(steamID) {
-				
-			clientSteam.chatMessage(steamID, `Sure! Steam guard code for this account is ${SteamTotp.generateAuthCode(config.shared_secret)}`);
-			} else {
-			clientSteam.chatMessage(steamID, "You don't have permission for this!");
-		}
 		if (command == 'help') {
 			clientSteam.chatMessage(steamID, `Hi! I'm a bot created by Maze. Available commands: \n ${config.prefix}take <type> \nValid item types: Common, Rare, Premium, Mythical, Uncommon \n This command will take specific type of items from your invmentory`)
 		}
@@ -560,6 +553,12 @@ client.on('message', msg => {
 		msg.channel.send(embeds.HELP(msg.author.id));
 	}
 
+	if (command == 'guard') {
+		if (config.ownerID.includes(msg.author.id)) {
+			msg.author.send(`Guard Code: ${SteamTotp.generateAuthCode(config.shared_secret)}`);
+		}
+	}
+
 	if (command == 'removeurl') {
 		user_exists(msg.author.id, function(exists) {
 			if (exists) {
@@ -693,8 +692,7 @@ client.on('message', msg => {
 					msg.channel.send('Invalid ID.');
 					return;
 				}
-			}
-			else {
+			} else {
 				msg.channel.send('You have to supply an ID to blacklist...');
 				return;
 			}
@@ -720,8 +718,7 @@ client.on('message', msg => {
 					msg.channel.send('Invalid ID.');
 					return;
 				}
-			}
-			else {
+			} else {
 				msg.channel.send('You have to supply an ID to blacklist...');
 				return;
 			}
