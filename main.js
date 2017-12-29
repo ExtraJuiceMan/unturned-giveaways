@@ -2,13 +2,15 @@ const Discord = require('discord.js');
 const fs = require('fs');
 const schedule = require('node-schedule');
 const sqlite3 = require('sqlite3').verbose();
-var SteamUser = require('steam-user');
-var SteamCommunity = require('steamcommunity');
-var SteamTotp = require('steam-totp');
-var TradeOfferManager = require('steam-tradeoffer-manager');
+const SteamUser = require('steam-user');
+const SteamCommunity = require('steamcommunity');
+const SteamTotp = require('steam-totp');
+const TradeOfferManager = require('steam-tradeoffer-manager');
+
 const config = require("./config.json");
-const db = new sqlite3.Database('./data.db');
 const embeds = require("./giveaway_embeds.js");
+const db = new sqlite3.Database('./data.db');
+
 
 const ITEM_TYPES = ["common", "premium", "mythical", "rare", "uncommon"];
 var session_expire_login = 0;
@@ -17,7 +19,7 @@ var reminder_time_check = 0;
 var not_eligible_cooldown = {};
 var no_tradeurl_cooldown = {};
 
-db.serialize(function() {
+db.serialize(function () {
 	db.run("CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY, url TEXT)");
 	db.run("CREATE TABLE IF NOT EXISTS entries(id INTEGER PRIMARY KEY)");
 	db.run("CREATE TABLE IF NOT EXISTS blacklist(id INTEGER PRIMARY KEY)");
@@ -45,7 +47,7 @@ if (fs.existsSync('polldata.json')) {
 }
 
 clientSteam.logOn(logOnOptions);
-clientSteam.on('loggedOn', function() {
+clientSteam.on('loggedOn', function () {
 	console.log(`Logged into Steam as: ${config.account_name}`);
 	clientSteam.setPersona(SteamUser.Steam.EPersonaState.Online);
 	clientSteam.gamesPlayed({
@@ -54,10 +56,10 @@ clientSteam.on('loggedOn', function() {
 	});
 });
 
-clientSteam.on('webSession', function(sessionID, cookies) {
-	console.log('Logging into Steam websession and setting cookies...')
+clientSteam.on('webSession', function (sessionID, cookies) {
+	console.log('Logging into Steam websession and setting cookies...');
 	community.setCookies(cookies);
-	manager.setCookies(cookies, function(err) {
+	manager.setCookies(cookies, function (err) {
 		if (err) {
 			console.log(err);
 			process.exit(1); // Fatal error since we couldn't get our API key
@@ -67,11 +69,11 @@ clientSteam.on('webSession', function(sessionID, cookies) {
 	});
 });
 
-clientSteam.on("friendMessage", function(steamID, msg) {
+clientSteam.on("friendMessage", function (steamID, msg) {
 	if (msg.indexOf(config.prefix) !== 0) {
 		return;
 	}
-	clientSteam.getPersonas([steamID], function(personas) {
+	clientSteam.getPersonas([steamID], function (personas) {
 		var persona = personas[steamID];
 		var name = persona ? persona.player_name : ("[" + steamID + "]");
 		const args = msg.slice(config.prefix.length).trim().split(/ +/g);
@@ -80,7 +82,7 @@ clientSteam.on("friendMessage", function(steamID, msg) {
 		console.log("Friend message from " + name + " [" + steamID + "]" + ": " + msg);
 
 		if (command == 'help') {
-			clientSteam.chatMessage(steamID, `Hi! I'm a bot created by Maze. Available commands: \n ${config.prefix}take <type> \nValid item types: Common, Rare, Premium, Mythical, Uncommon \n This command will take specific type of items from your invmentory`)
+			clientSteam.chatMessage(steamID, `Hi! I'm a bot created by Maze. Available commands: \n ${config.prefix}take <type> \nValid item types: Common, Rare, Premium, Mythical, Uncommon \n This command will take specific type of items from your invmentory`);
 		}
 		if (command == 'take') {
 			if (args.length == 0) {
@@ -95,10 +97,10 @@ clientSteam.on("friendMessage", function(steamID, msg) {
 				} else {
 					clientSteam.chatMessage(steamID, "Sure thing, just let me check your invmentory!");
 					try {
-						manager.getUserInventoryContents(steamID, 304930, 2, true, function(err, inv, cur) {
+						manager.getUserInventoryContents(steamID, 304930, 2, true, function (err, inv, cur) {
 							var playerinv = inv;
-							console.log(`User has ${playerinv.length} items.`)
-							var sort_items = playerinv.filter(function(item) {
+							console.log(`User has ${playerinv.length} items.`);
+							var sort_items = playerinv.filter(function (item) {
 								return item.type.includes(capitalize_first(type));
 							});
 							if (sort_items.length == 0) {
@@ -109,7 +111,7 @@ clientSteam.on("friendMessage", function(steamID, msg) {
 						});
 					} catch (err) {
 						console.log(err);
-						clientSteam.chatMessage(steamID, "Sorry, but I failed to get your invmentory content! :(")
+						clientSteam.chatMessage(steamID, "Sorry, but I failed to get your invmentory content! :(");
 					}
 				}
 			}
@@ -137,7 +139,7 @@ manager.on('newOffer', (offer) => {
 	}
 });
 
-community.on('sessionExpired', function(err) {
+community.on('sessionExpired', function (err) {
 	if (Date.now() - session_expire_login < 5000) {
 		console.log("Session expired fired too fast");
 		return;
@@ -156,7 +158,7 @@ function capitalize_first(string) {
 
 function inventory_contents(callback) {
 	try {
-		manager.getInventoryContents(304930, 2, true, function(err, inv) {
+		manager.getInventoryContents(304930, 2, true, function (err, inv) {
 			callback(inv);
 			if (err) {
 				console.log(err);
@@ -169,31 +171,31 @@ function inventory_contents(callback) {
 
 function insert_user(id) {
 	var stmt = db.prepare('INSERT INTO entries VALUES (?)');
-	stmt.run(id)
+	stmt.run(id);
 	stmt.finalize();
 }
 
 function insert_blacklist(id) {
 	var stmt = db.prepare('INSERT INTO blacklist VALUES (?)');
-	stmt.run(id)
+	stmt.run(id);
 	stmt.finalize();
 }
 
 function remove_blacklist(id) {
 	var stmt = db.prepare('DELETE FROM blacklist WHERE id = ?');
-	stmt.run(id)
+	stmt.run(id);
 	stmt.finalize();
 }
 
 function remove_user(id) {
 	var stmt = db.prepare('DELETE FROM entries WHERE id = ?');
-	stmt.run(id)
+	stmt.run(id);
 	stmt.finalize();
 }
 
 function insert_giveaway(id) {
 	var stmt = db.prepare('INSERT INTO giveaways (msgid) VALUES (?)');
-	stmt.run(id)
+	stmt.run(id);
 	stmt.finalize();
 }
 
@@ -243,14 +245,14 @@ function ask_items(steamID, items_asked) {
 	var offer = manager.createOffer(steamID);
 	offer.addTheirItems(items_asked);
 	offer.setMessage(`These are the items that you're giving me :)`);
-	offer.send(function(err, status) {
+	offer.send(function (err, status) {
 		if (err) {
 			console.log(err);
 			return;
 		}
 		if (status == 'pending') {
 			console.log(`Offer #${offer.id} sent, but requires confirmation`);
-			community.acceptConfirmationForObject(config.identity_secret, offer.id, function(err) {
+			community.acceptConfirmationForObject(config.identity_secret, offer.id, function (err) {
 				if (err) {
 					console.log(err);
 				} else {
@@ -259,13 +261,13 @@ function ask_items(steamID, items_asked) {
 			});
 		} else {
 			console.log(`Offer #${offer.id} sent successfully`);
-			clientSteam.chatMessage(steamID, `Offer #${offer.id} successfully sent!`)
+			clientSteam.chatMessage(steamID, `Offer #${offer.id} successfully sent!`);
 		}
 	});
 }
 
 function send_prize(url, winner) {
-	manager.getInventoryContents(304930, 2, true, function(err, inventory) {
+	manager.getInventoryContents(304930, 2, true, function (err, inventory) {
 		if (err) {
 			console.log(err);
 			return;
@@ -277,21 +279,21 @@ function send_prize(url, winner) {
 		console.log("Found " + inventory.length + " items");
 		try {
 			var offer = manager.createOffer(url);
-			var sent_items = random(inventory, Math.floor(Math.random() * 5) + 5)
+			var sent_items = random(inventory, Math.floor(Math.random() * 5) + 5);
 			offer.addMyItems(sent_items);
 			offer.setMessage(config.offer_message);
-			offer.send(function(err, status) {
-				console.log('Offer sent!')
+			offer.send(function (err, status) {
+				console.log('Offer sent!');
 				if (err) {
 					console.log(err);
 					return;
 				}
 				if (status == 'pending') {
 					console.log(`Offer #${offer.id} sent, but requires confirmation`);
-					community.acceptConfirmationForObject(config.identity_secret, offer.id, function(err) {
+					community.acceptConfirmationForObject(config.identity_secret, offer.id, function (err) {
 						if (err) {
 							console.log(err);
-							console.log('Offer was not accepted, error.')
+							console.log('Offer was not accepted, error.');
 							return;
 						} else {
 							console.log("Offer confirmed.");
@@ -300,8 +302,8 @@ function send_prize(url, winner) {
 				}
 			});
 
-		} catch (err) {
-			console.log(`Couldn't send the trade because of ${err}!`);
+		} catch (e) {
+			console.log(`Couldn't send the trade because of ${e}!`);
 			client.fetchUser(winner).then((User) => {
 				User.send(embeds.PRIZE_FAIL);
 				clientSteam.relog();
@@ -312,7 +314,7 @@ function send_prize(url, winner) {
 
 // Functions w/ callbacks
 function latest_giveaway(callback) {
-	db.get("SELECT CAST(msgid AS TEXT) AS msgid, id FROM giveaways WHERE id = (SELECT MAX(id) FROM giveaways);", function(err, row) {
+	db.get("SELECT CAST(msgid AS TEXT) AS msgid, id FROM giveaways WHERE id = (SELECT MAX(id) FROM giveaways);", function (err, row) {
 		if (row) {
 			callback(row.msgid, row.id);
 		} else {
@@ -322,7 +324,7 @@ function latest_giveaway(callback) {
 }
 
 function entry_exists(id, callback) {
-	db.get("SELECT * FROM entries WHERE id = ?", id, function(err, row) {
+	db.get("SELECT * FROM entries WHERE id = ?", id, function (err, row) {
 		var exists = false;
 		if (row) {
 			exists = true;
@@ -332,7 +334,7 @@ function entry_exists(id, callback) {
 }
 
 function user_exists(id, callback) {
-	db.get("SELECT * FROM users WHERE id = ?", id, function(err, row) {
+	db.get("SELECT * FROM users WHERE id = ?", id, function (err, row) {
 		var exists = false;
 		if (row) {
 			exists = true;
@@ -342,7 +344,7 @@ function user_exists(id, callback) {
 }
 
 function get_url(id, callback) {
-	db.get("SELECT * FROM users WHERE id = ?", id, function(err, row) {
+	db.get("SELECT * FROM users WHERE id = ?", id, function (err, row) {
 		if (!row) {
 			callback(null);
 		} else {
@@ -352,7 +354,7 @@ function get_url(id, callback) {
 }
 
 function user_blacklisted(id, callback) {
-	db.get("SELECT * FROM blacklist WHERE id = ?", id, function(err, row) {
+	db.get("SELECT * FROM blacklist WHERE id = ?", id, function (err, row) {
 		if (!row) {
 			callback(false);
 		} else {
@@ -362,7 +364,7 @@ function user_blacklisted(id, callback) {
 }
 
 function url_exists(tradeurl, callback) {
-	db.get("SELECT * FROM users WHERE url = ?", tradeurl, function(err, row) {
+	db.get("SELECT * FROM users WHERE url = ?", tradeurl, function (err, row) {
 		var exists = false;
 		if (row) {
 			exists = true;
@@ -372,7 +374,7 @@ function url_exists(tradeurl, callback) {
 }
 
 function select_winner(callback) {
-	db.get("SELECT CAST(id AS TEXT) AS id FROM entries ORDER BY RANDOM() LIMIT 1;", function(err, row) {
+	db.get("SELECT CAST(id AS TEXT) AS id FROM entries ORDER BY RANDOM() LIMIT 1;", function (err, row) {
 		if (row) {
 			callback(row.id);
 		} else {
@@ -382,7 +384,7 @@ function select_winner(callback) {
 }
 
 function number_entrants(callback) {
-	db.get("SELECT COUNT(*) FROM entries", function(err, row) {
+	db.get("SELECT COUNT(*) FROM entries", function (err, row) {
 		if (row) {
 			callback(row['COUNT(*)']);
 		} else {
@@ -396,8 +398,8 @@ client.on('ready', () => {
 	console.log(`Logged in as ${client.user.tag}!`);
 	console.log(new Date().toLocaleString());
 	console.log(`Ready to serve in ${client.channels.size} channels on ${client.guilds.size} servers, for a total of ${client.users.size} users.`);
-	client.user.setGame("g>help | free stuff1!111!", "https://www.twitch.tv/Courierfive")
-	latest_giveaway(function(msgid, row_id) {
+	client.user.setGame("g>help | free stuff1!111!", "https://www.twitch.tv/Courierfive");
+	latest_giveaway(function (msgid, row_id) {
 		console.log('Resuming giveaway ID #' + msgid);
 		client.channels.get(config.channel_id).fetchMessage(msgid);
 	});
@@ -413,12 +415,12 @@ client.on('messageReactionAdd', (reaction, user) => {
 	if (reaction.emoji.name != "✅") {
 		return;
 	}
-	latest_giveaway(function(msgid, row_id) {
+	latest_giveaway(function (msgid, row_id) {
 		if (reaction.message.id != msgid) {
 			return;
 		}
-		db.get("SELECT * FROM blacklist WHERE id = ?", user.id, function(err, row) {
-			user_blacklisted(user.id, function(user_blacklisted) {
+		db.get("SELECT * FROM blacklist WHERE id = ?", user.id, function (err, row) {
+			user_blacklisted(user.id, function (user_blacklisted) {
 				if (user_blacklisted) {
 					reaction.remove(user);
 					if (not_eligible_cooldown[user.id]) {
@@ -430,8 +432,8 @@ client.on('messageReactionAdd', (reaction, user) => {
 					user.send(embeds.ENTRY_FAIL_BLACKLISTED);
 					return;
 				} else {
-					db.get("SELECT * FROM entries WHERE id = ?", user.id, function(err, row) {
-						user_exists(user.id, function(user_exists) {
+					db.get("SELECT * FROM entries WHERE id = ?", user.id, function (err, row) {
+						user_exists(user.id, function (user_exists) {
 							// Check if user exists in url table
 							if (!user_exists) {
 								reaction.remove(user);
@@ -446,7 +448,7 @@ client.on('messageReactionAdd', (reaction, user) => {
 							}
 							// Enter giveaway if row does not exist
 							if (!row) {
-								db.get("SELECT * FROM (SELECT * FROM giveaways ORDER BY id DESC LIMIT 4 OFFSET 1) WHERE winner = ?", user.id, function(err, row) {
+								db.get("SELECT * FROM (SELECT * FROM giveaways ORDER BY id DESC LIMIT 4 OFFSET 1) WHERE winner = ?", user.id, function (err, row) {
 									if (row) {
 										reaction.remove(user);
 										if (not_eligible_cooldown[user.id]) {
@@ -457,7 +459,7 @@ client.on('messageReactionAdd', (reaction, user) => {
 										not_eligible_cooldown[user.id] = Date.now();
 										user.send(embeds.ENTRY_FAIL_RECENT_WINNER);
 									} else {
-										reaction.message.guild.fetchMember(user).then(function(member) {
+										reaction.message.guild.fetchMember(user).then(function (member) {
 											if (!member.roles.find(e => e.name == '1-10')) {
 												reaction.remove(user);
 												if (not_eligible_cooldown[user.id]) {
@@ -492,7 +494,7 @@ client.on('messageReactionAdd', (reaction, user) => {
 });
 
 client.on('guildMemberRemove', usr => {
-	entry_exists(usr.id, function(exists) {
+	entry_exists(usr.id, function (exists) {
 		if (exists) {
 			remove_user(usr.id);
 		} else {
@@ -530,12 +532,12 @@ client.on('message', msg => {
 		if (!match) {
 			msg.author.send(embeds.URL_FAIL_INVALID_ARGS);
 		} else {
-			url_exists(tradeurl, function(exists) {
+			url_exists(tradeurl, function (exists) {
 				if (exists) {
 					console.log(`User with ID:${msg.author.id} and name:${msg.author.tag} tried to add a trade url that another user has already added! Their message: ${msg.content}`);
 					msg.author.send(embeds.URL_FAIL_ALREADY_EXISTS);
 				} else {
-					db.get("SELECT * FROM users WHERE id = ?", msg.author.id, function(err, row) {
+					db.get("SELECT * FROM users WHERE id = ?", msg.author.id, function (err, row) {
 						if (row) {
 							update_tradeurl(msg.author.id, tradeurl);
 							msg.author.send(embeds.URL_SUCCESS_UPDATE(tradeurl));
@@ -560,9 +562,9 @@ client.on('message', msg => {
 	}
 
 	if (command == 'removeurl') {
-		user_exists(msg.author.id, function(exists) {
+		user_exists(msg.author.id, function (exists) {
 			if (exists) {
-				entry_exists(msg.author.id, function(user_exists) {
+				entry_exists(msg.author.id, function (user_exists) {
 					if (user_exists) {
 						remove_user(msg.author.id);
 						delete_tradeurl(msg.author.id);
@@ -586,18 +588,18 @@ client.on('message', msg => {
 		if (config.ownerID.includes(msg.author.id)) {
 			try {
 				var statement = args.join(' ');
-				db.all(statement, function(err, rows) {
+				db.all(statement, function (err, rows) {
 					if (!rows) {
-						msg.channel.send("Your query returned nothing.")
+						msg.channel.send("Your query returned nothing.");
 					} else {
-						msg.channel.send('```' + JSON.stringify(rows) + '```').then().catch(function(err) {
-							msg.channel.send('Failed to send message, it was probably too long. limit your query.')
+						msg.channel.send('```' + JSON.stringify(rows) + '```').then().catch(function (err) {
+							msg.channel.send('Failed to send message, it was probably too long. limit your query.');
 						});
 					}
 				});
 			} catch (err) {
 				console.log(err);
-				msg.channel.send("Exception. Please make sure that your statement is valid.")
+				msg.channel.send("Exception. Please make sure that your statement is valid.");
 			}
 		} else {
 			return;
@@ -619,17 +621,17 @@ client.on('message', msg => {
 	if (command == 'checkreactions') {
 		// If the bot is offline for an extended period of time and we need to recheck reactions
 		if (config.ownerID.includes(msg.author.id)) {
-			latest_giveaway(function(msgid, row_id) {
+			latest_giveaway(function (msgid, row_id) {
 				client.channels.get(config.channel_id).fetchMessage(msgid)
 					.then(message => {
 						var reactions = message.reactions;
-						var check_reaction = reactions.find(function(r) {
+						var check_reaction = reactions.find(function (r) {
 							return r.emoji.name == '✅';
 						});
 						check_reaction.fetchUsers().then(users => {
-							users.forEach(function(user) {
-								db.get("SELECT * FROM entries WHERE id = ?", user.id, function(err, row) {
-									user_exists(user.id, function(user_exists) {
+							users.forEach(function (user) {
+								db.get("SELECT * FROM entries WHERE id = ?", user.id, function (err, row) {
+									user_exists(user.id, function (user_exists) {
 										// Check if user exists in url table
 										if (!user_exists) {
 											return;
@@ -657,15 +659,15 @@ client.on('message', msg => {
 			client.channels.get(config.channel_id).fetchMessage(args[0])
 				.then(message => {
 					var reactions = message.reactions;
-					var check_reaction = reactions.find(function(r) {
+					var check_reaction = reactions.find(function (r) {
 						return r.emoji.name == '✅';
 					});
 					check_reaction.fetchUsers().then(users => {
-						users.forEach(function(user) {
+						users.forEach(function (user) {
 							if (!user.equals(client.user)) {
 								user.send(embeds.MASS_DM);
 							}
-						})
+						});
 						msg.channel.send('Done.');
 					});
 				});
@@ -687,8 +689,8 @@ client.on('message', msg => {
 		// Command to ban someone xdxd
 		if (config.ownerID.includes(msg.author.id)) {
 			if (args.length == 1) {
-				var userid = args[0].replace(/\D/g, '');
-				if (userid.length == 0) {
+				var user_id = args[0].replace(/\D/g, '');
+				if (user_id.length == 0) {
 					msg.channel.send('Invalid ID.');
 					return;
 				}
@@ -697,12 +699,12 @@ client.on('message', msg => {
 				return;
 			}
 
-			user_blacklisted(userid, function(blacklisted) {
+			user_blacklisted(id, function (blacklisted) {
 				if (!blacklisted) {
-					insert_blacklist(userid);
-					msg.channel.send('The ID ' + userid + ' has been banned!');
+					insert_blacklist(id);
+					msg.channel.send('The ID ' + id + ' has been banned!');
 				} else {
-					msg.channel.send('That user is already blacklisted.')
+					msg.channel.send('That user is already blacklisted.');
 				}
 			});
 		} else {
@@ -713,8 +715,8 @@ client.on('message', msg => {
 		// Command to unban someone
 		if (config.ownerID.includes(msg.author.id)) {
 			if (args.length == 1) {
-				var userid = args[0].replace(/\D/g, '');
-				if (userid.length == 0) {
+				var user_id = args[0].replace(/\D/g, '');
+				if (user_id.length == 0) {
 					msg.channel.send('Invalid ID.');
 					return;
 				}
@@ -723,12 +725,12 @@ client.on('message', msg => {
 				return;
 			}
 
-			user_blacklisted(userid, function(blacklisted) {
+			user_blacklisted(id, function (blacklisted) {
 				if (blacklisted) {
-					remove_blacklist(userid);
-					msg.channel.send('The ID ' + userid + ' has been unbanned!');
+					remove_blacklist(id);
+					msg.channel.send('The ID ' + id + ' has been unbanned!');
 				} else {
-					msg.channel.send('That user isn\'t even blacklisted.')
+					msg.channel.send('That user isn\'t even blacklisted.');
 				}
 			});
 		} else {
@@ -752,20 +754,20 @@ client.on('message', msg => {
 		// Force sends msg
 		if (config.ownerID.includes(msg.author.id)) {
 			client.channels.get(args[0]).send(args.slice(1).join(" "));
-			msg.channel.send('Done.')
+			msg.channel.send('Done.');
 		} else {
 			return;
 		}
 	}
 
 	if (command == 'total') {
-		number_entrants(function(number) {
+		number_entrants(function (number) {
 			msg.channel.send(embeds.TOTAL_ENTRANTS(number));
 		});
 	}
 
 	if (command == 'mystatus') {
-		entry_exists(msg.author.id, function(exists) {
+		entry_exists(msg.author.id, function (exists) {
 			if (exists) {
 				msg.channel.send(embeds.MY_STATUS_TRUE);
 			} else {
@@ -775,7 +777,7 @@ client.on('message', msg => {
 	}
 
 	if (command == 'mytradeurl') {
-		get_url(msg.author.id, function(url) {
+		get_url(msg.author.id, function (url) {
 			if (url) {
 				msg.channel.send(embeds.MY_URL(url));
 			} else {
@@ -785,24 +787,24 @@ client.on('message', msg => {
 	}
 
 	if (command == 'blacklisted') {
-		var users = []
-		db.each("SELECT CAST(id AS TEXT) AS uid FROM blacklist", function(err, row) {
+		var users = [];
+		db.each("SELECT CAST(id AS TEXT) AS uid FROM blacklist", function (err, row) {
 			if (row) {
-				users.push(row.uid)
+				users.push(row.uid);
 			}
-		}, function(err, num_rows) {
+		}, function (err, num_rows) {
 			msg.channel.send('```\n' + users.join('\n') + '```');
 		});
 	}
-	
+
 	if (command == 'botitems') {
-		inventory_contents(function(items) {
-			msg.author.send(embeds.BOT_ITEMS(items))
+		inventory_contents(function (items) {
+			msg.author.send(embeds.BOT_ITEMS(items));
 		});
 	}
 
 	if (command == 'cede') {
-		entry_exists(msg.author.id, function(exists) {
+		entry_exists(msg.author.id, function (exists) {
 			if (exists) {
 				remove_user(msg.author.id);
 				msg.channel.send(embeds.REMOVE_ENTRY_SUCCESS);
@@ -814,20 +816,20 @@ client.on('message', msg => {
 });
 
 // Update game status
-var status_j = schedule.scheduleJob('*/5 * * * *', function() {
-	number_entrants(function(count) {
+var status_j = schedule.scheduleJob('*/5 * * * *', function () {
+	number_entrants(function (count) {
 		if (count) {
-			client.user.setGame(`g>help | ${count} Entries!`, "https://www.twitch.tv/Courierfive")
+			client.user.setGame(`g>help | ${count} Entries!`, "https://www.twitch.tv/Courierfive");
 		} else {
-			client.user.setGame(`g>help | 0 Entries!`, "https://www.twitch.tv/Courierfive")
+			client.user.setGame(`g>help | 0 Entries!`, "https://www.twitch.tv/Courierfive");
 		}
 	});
 });
 
-var loggedin_j = schedule.scheduleJob('50 * * * *', function() {
+var loggedin_j = schedule.scheduleJob('50 * * * *', function () {
 	check_time = new Date().toLocaleString();
 	console.log(check_time + ' Checking to see if we are logged in...');
-	community.loggedIn(function(err, logged, family) {
+	community.loggedIn(function (err, logged, family) {
 		if (err) {
 			console.log(err);
 		}
@@ -844,20 +846,20 @@ var reminder_j = schedule.scheduleJob({
 	hour: 16,
 	minute: 30,
 	dayOfWeek: 0
-}, function() {
+}, function () {
 	if (Date.now() - reminder_time_check < 5000) {
 		console.log("Double reminder, canceling task.");
 		return;
 	}
 	reminder_time_check = Date.now();
 	console.log('Sending mass reminder DM...');
-	db.each("SELECT CAST(id AS TEXT) AS uid FROM users", function(err, row) {
+	db.each("SELECT CAST(id AS TEXT) AS uid FROM users", function (err, row) {
 		if (row) {
 			client.fetchUser(row.uid).then((User) => {
 				User.send(embeds.REMINDER_DM);
 			});
 		}
-	}, function(err, num_rows) {
+	}, function (err, num_rows) {
 		console.log('Sent mass DM to ' + num_rows + ' users.');
 	});
 });
@@ -865,7 +867,7 @@ var reminder_j = schedule.scheduleJob({
 var relog_j = schedule.scheduleJob({
 	hour: 15,
 	minute: 55
-}, function() {
+}, function () {
 	// Maze likes to log into the bot, so this is to make sure that
 	// we don't get a session replaced error when we send the trade.
 	console.log('Relogging before picking winner...');
@@ -875,17 +877,17 @@ var relog_j = schedule.scheduleJob({
 var j = schedule.scheduleJob({
 	hour: 16,
 	minute: 01
-}, function() {
+}, function () {
 	if (Date.now() - giveaway_time_check < 5000) {
 		console.log("Double giveaway, canceling task.");
 		return;
 	}
 	giveaway_time_check = Date.now();
 	console.log('Winner picked. Next giveaway beginning.');
-	select_winner(function(winner) {
+	select_winner(function (winner) {
 		if (!winner) {
 			client.channels.get(config.channel_id).send(embeds.NOBODY_ENTERED).then(message => message.delete(300000));
-			latest_giveaway(function(previous_id, row_id) {
+			latest_giveaway(function (previous_id, row_id) {
 				client.channels.get(config.channel_id).fetchMessage(previous_id)
 					.then(message => {
 						message.edit(embeds.WINNER_EDIT_NOBODY);
@@ -900,22 +902,22 @@ var j = schedule.scheduleJob({
 				.catch(console.error);
 
 			// Gets url, sends prize to winner.
-			get_url(winner, function(url) {
+			get_url(winner, function (url) {
 				client.fetchUser(winner).then((User) => {
 					User.send(embeds.WINNER_ALERT(url));
 				});
-				latest_giveaway(function(previous_id, row_id) {
+				latest_giveaway(function (previous_id, row_id) {
 					client.channels.get(config.channel_id).fetchMessage(previous_id)
 						.then(message => {
 							message.edit(embeds.WINNER_EDIT(winner));
 						});
-					db.each("SELECT CAST(id AS TEXT) AS uid FROM entries WHERE id != ?", winner, function(err, row) {
+					db.each("SELECT CAST(id AS TEXT) AS uid FROM entries WHERE id != ?", winner, function (err, row) {
 						if (row) {
 							client.fetchUser(row.uid).then((User) => {
 								User.send(embeds.MASS_DM);
 							});
 						}
-					}, function(err, num_rows) {
+					}, function (err, num_rows) {
 						console.log('Sent mass DM to ' + num_rows + ' entrants.');
 						clear_entries();
 						update_giveaway(row_id, winner);
