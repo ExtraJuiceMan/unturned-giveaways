@@ -784,6 +784,17 @@ client.on('message', msg => {
 		});
 	}
 
+	if (command == 'blacklisted') {
+		var users = []
+		db.each("SELECT CAST(id AS TEXT) AS uid FROM blacklist", function(err, row) {
+			if (row) {
+				users.push(row.uid)
+			}
+		}, function(err, num_rows) {
+			msg.channel.send('```\n' + users.join('\n') + '```');
+		});
+	}
+	
 	if (command == 'botitems') {
 		inventory_contents(function(items) {
 			msg.author.send(embeds.BOT_ITEMS(items))
