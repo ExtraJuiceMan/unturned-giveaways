@@ -688,7 +688,7 @@ client.on('message', msg => {
 		// Command to ban someone xdxd
 		if (config.ownerID.includes(msg.author.id)) {
 			if (args.length == 1) {
-				var user_id = args[0].replace(/\D/g, '');
+				let user_id = args[0].replace(/\D/g, '');
 				if (user_id.length == 0) {
 					msg.channel.send('Invalid ID.');
 					return;
@@ -714,7 +714,7 @@ client.on('message', msg => {
 		// Command to unban someone
 		if (config.ownerID.includes(msg.author.id)) {
 			if (args.length == 1) {
-				var user_id = args[0].replace(/\D/g, '');
+				let user_id = args[0].replace(/\D/g, '');
 				if (user_id.length == 0) {
 					msg.channel.send('Invalid ID.');
 					return;
