@@ -6,3 +6,4 @@ redme.txt
 test.db
 package-lock.json
 config.json
+.eslintrc.json

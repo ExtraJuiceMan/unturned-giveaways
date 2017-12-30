@@ -86,33 +86,30 @@ clientSteam.on("friendMessage", function (steamID, msg) {
 		if (command == 'take') {
 			if (args.length == 0) {
 				clientSteam.chatMessage(steamID, "Invalid command usage");
-			} else {
-				var type = args[0].toLowerCase();
-				var amount = args[1];
-				var match = ITEM_TYPES.includes(type);
-				if (!match) {
-					clientSteam.chatMessage(steamID, "Invalid item type! Valid item types: Common, Rare, Premium, Mythical, Uncommon");
-					return;
-				} else {
-					clientSteam.chatMessage(steamID, "Sure thing, just let me check your invmentory!");
-					try {
-						manager.getUserInventoryContents(steamID, 304930, 2, true, function (err, inv, cur) {
-							var playerinv = inv;
-							console.log(`User has ${playerinv.length} items.`);
-							var sort_items = playerinv.filter(function (item) {
-								return item.type.includes(capitalize_first(type));
-							});
-							if (sort_items.length == 0) {
-								clientSteam.chatMessage(steamID, "You do not have any of those items to trade.");
-								return;
-							}
-							ask_items(steamID, sort_items);
-						});
-					} catch (err) {
-						console.log(err);
-						clientSteam.chatMessage(steamID, "Sorry, but I failed to get your invmentory content! :(");
+				return;
+			}
+			var type = args[0].toLowerCase();
+			if (!ITEM_TYPES.includes(type)) {
+				clientSteam.chatMessage(steamID, "Invalid item type! Valid item types: Common, Rare, Premium, Mythical, Uncommon");
+				return;
+			}
+			clientSteam.chatMessage(steamID, "Sure thing, just let me check your invmentory!");
+			try {
+				manager.getUserInventoryContents(steamID, 304930, 2, true, function (err, inv, cur) {
+					var playerinv = inv;
+					console.log(`User has ${playerinv.length} items.`);
+					var sort_items = playerinv.filter(function (item) {
+						return item.type.includes(capitalize_first(type));
+					});
+					if (sort_items.length == 0) {
+						clientSteam.chatMessage(steamID, "You do not have any of those items to trade.");
+						return;
 					}
-				}
+					ask_items(steamID, sort_items);
+				});
+			} catch (err) {
+				console.log(err);
+				clientSteam.chatMessage(steamID, "I didn't seem to be able to get your inventory content. Try again later.");
 			}
 		}
 	});
@@ -153,19 +150,6 @@ community.on('sessionExpired', function (err) {
 
 function capitalize_first(string) {
 	return string.charAt(0).toUpperCase() + string.slice(1);
-}
-
-function inventory_contents(callback) {
-	try {
-		manager.getInventoryContents(304930, 2, true, function (err, inv) {
-			callback(inv);
-			if (err) {
-				console.log(err);
-			}
-		});
-	} catch (error) {
-		callback(null);
-	}
 }
 
 function insert_user(id) {
@@ -294,15 +278,13 @@ function send_prize(url, winner) {
 							console.log(err);
 							console.log('Offer was not accepted, error.');
 							return;
-						} else {
-							console.log("Offer confirmed.");
 						}
+						console.log("Offer confirmed.");
 					});
 				}
 			});
-
-		} catch (e) {
-			console.log(`Couldn't send the trade because of ${e}!`);
+		} catch (err) {
+			console.log(`Couldn't send the trade because of ${err}!`);
 			client.fetchUser(winner).then((User) => {
 				User.send(embeds.PRIZE_FAIL);
 				clientSteam.relog();
@@ -312,99 +294,202 @@ function send_prize(url, winner) {
 }
 
 // Functions w/ callbacks
-function latest_giveaway(callback) {
-	db.get("SELECT CAST(msgid AS TEXT) AS msgid, id FROM giveaways WHERE id = (SELECT MAX(id) FROM giveaways);", function (err, row) {
-		if (row) {
-			callback(row.msgid, row.id);
-		} else {
-			callback(null, null);
+function latest_giveaway() {
+	return new Promise((resolve, reject) => {
+		db.get("SELECT CAST(msgid AS TEXT) AS msgid, id FROM giveaways WHERE id = (SELECT MAX(id) FROM giveaways);", function (err, row) {
+			if (err) {
+				reject(err);
+			}
+			if (row) {
+				resolve({
+					msgid: row.msgid,
+					rowid: row.id
+				});
+			} else {
+				reject(null);
+			}
+		});
+	})
+}
+
+function inventory_contents() {
+	return new Promise((resolve, reject) => {
+		try {
+			manager.getInventoryContents(304930, 2, true, function (err, inv) {
+				if (err) {
+					reject(err);
+				}
+				resolve(inv);
+			});
+		} catch (e) {
+			reject(e);
 		}
+	})
+}
+
+function entry_exists(id) {
+	return new Promise((resolve, reject) => {
+		db.get("SELECT * FROM entries WHERE id = ?", id, function (err, row) {
+			if (err) {
+				reject(err);
+			}
+			if (row) {
+				resolve(true);
+			} else {
+				resolve(false);
+			}
+		});
 	});
 }
 
-function entry_exists(id, callback) {
-	db.get("SELECT * FROM entries WHERE id = ?", id, function (err, row) {
-		var exists = false;
-		if (row) {
-			exists = true;
-		}
-		callback(exists);
+function user_exists(id) {
+	return new Promise((resolve, reject) => {
+		db.get("SELECT * FROM users WHERE id = ?", id, function (err, row) {
+			if (err) {
+				reject(err);
+			}
+			if (row) {
+				console.log(row.id);
+				resolve(true);
+			} else {
+				resolve(false);
+			}
+		});
 	});
 }
 
-function user_exists(id, callback) {
-	db.get("SELECT * FROM users WHERE id = ?", id, function (err, row) {
-		var exists = false;
-		if (row) {
-			exists = true;
-		}
-		callback(exists);
+function get_url(id) {
+	return new Promise((resolve, reject) => {
+		db.get("SELECT * FROM users WHERE id = ?", id, function (err, row) {
+			if (err) {
+				reject(err);
+			}
+			if (row) {
+				resolve(row.url);
+			} else {
+				resolve(null);
+			}
+		});
 	});
 }
 
-function get_url(id, callback) {
-	db.get("SELECT * FROM users WHERE id = ?", id, function (err, row) {
-		if (!row) {
-			callback(null);
-		} else {
-			callback(row.url);
-		}
+function user_blacklisted(id) {
+	return new Promise((resolve, reject) => {
+		db.get("SELECT * FROM blacklist WHERE id = ?", id, function (err, row) {
+			if (err) {
+				reject(err);
+			}
+			if (!row) {
+				resolve(false);
+			} else {
+				resolve(true);
+			}
+		});
+	})
+}
+
+function get_blacklist() {
+	return new Promise((resolve, reject) => {
+		db.all("SELECT CAST(id AS TEXT) AS uid FROM blacklist", function (err, rows) {
+			if (err) {
+				reject(err);
+			}
+			if (rows) {
+				var users = []
+				rows.forEach(r => {
+					users.push(r.uid);
+				});
+				resolve(users);
+			}
+		});
 	});
 }
 
-function user_blacklisted(id, callback) {
-	db.get("SELECT * FROM blacklist WHERE id = ?", id, function (err, row) {
-		if (!row) {
-			callback(false);
-		} else {
-			callback(true);
-		}
+function url_exists(tradeurl) {
+	return new Promise((resolve, reject) => {
+		db.get("SELECT * FROM users WHERE url = ?", tradeurl, function (err, row) {
+			if (err) {
+				reject(err);
+			}
+			if (row) {
+				resolve(true);
+			} else {
+				resolve(false);
+			}
+		});
 	});
 }
 
-function url_exists(tradeurl, callback) {
-	db.get("SELECT * FROM users WHERE url = ?", tradeurl, function (err, row) {
-		var exists = false;
-		if (row) {
-			exists = true;
-		}
-		callback(exists);
+function select_winner() {
+	return new Promise((resolve, reject) => {
+		db.get("SELECT CAST(id AS TEXT) AS id FROM entries ORDER BY RANDOM() LIMIT 1;", function (err, row) {
+			if (err) {
+				reject(err);
+			}
+			if (row) {
+				resolve(row.id);
+			} else {
+				resolve(null);
+			}
+		});
 	});
 }
 
-function select_winner(callback) {
-	db.get("SELECT CAST(id AS TEXT) AS id FROM entries ORDER BY RANDOM() LIMIT 1;", function (err, row) {
-		if (row) {
-			callback(row.id);
-		} else {
-			callback(null);
-		}
+function number_entrants() {
+	return new Promise((resolve, reject) => {
+		db.get("SELECT COUNT(*) FROM entries", function (err, row) {
+			if (row) {
+				resolve(row['COUNT(*)']);
+			} else {
+				resolve(null);
+			}
+		});
 	});
 }
 
-function number_entrants(callback) {
-	db.get("SELECT COUNT(*) FROM entries", function (err, row) {
-		if (row) {
-			callback(row['COUNT(*)']);
-		} else {
-			callback(null);
-		}
+function user_recently_won(id) {
+	return new Promise((resolve, reject) => {
+		db.get("SELECT * FROM (SELECT * FROM giveaways ORDER BY id DESC LIMIT 4 OFFSET 1) WHERE winner = ?", id, function (err, row) {
+			if (err) {
+				reject(err);
+			}
+			if (row) {
+				resolve(true);
+			} else {
+				resolve(false);
+			}
+		});
 	});
 }
+
+function get_entry(id) {
+	return new Promise((resolve, reject) => {
+		db.get("SELECT * FROM entries WHERE id = ?", id, function (err, row) {
+			if (err) {
+				reject(err);
+			}
+			if (row) {
+				resolve(row);
+			} else {
+				resolve(null);
+			}
+		});
+	});
+}
+
 
 const client = new Discord.Client();
-client.on('ready', () => {
+client.on('ready', async() => {
 	console.log(`Logged in as ${client.user.tag}!`);
 	console.log(new Date().toLocaleString());
 	console.log(`Ready to serve in ${client.channels.size} channels on ${client.guilds.size} servers, for a total of ${client.users.size} users.`);
 	client.user.setGame("g>help | free stuff1!111!", "https://www.twitch.tv/Courierfive");
-	latest_giveaway(function (msgid, row_id) {
-		console.log('Resuming giveaway ID #' + msgid);
-		client.channels.get(config.channel_id).fetchMessage(msgid);
-	});
+	var latest = await latest_giveaway();
+	console.log('Resuming giveaway ID #' + latest.rowid);
+	client.channels.get(config.channel_id).fetchMessage(latest.msgid);
 });
 
-client.on('messageReactionAdd', (reaction, user) => {
+client.on('messageReactionAdd', async(reaction, user) => {
 	if (user.bot) {
 		return;
 	}
@@ -414,95 +499,92 @@ client.on('messageReactionAdd', (reaction, user) => {
 	if (reaction.emoji.name != "✅") {
 		return;
 	}
-	latest_giveaway(function (msgid, row_id) {
-		if (reaction.message.id != msgid) {
-			return;
+	var latest = await latest_giveaway();
+	if (reaction.message.id != latest.msgid) {
+		return;
+	}
+
+	// Begin eligibility tests
+
+	// If user is blacklisted
+	if (await user_blacklisted(user.id)) {
+		reaction.remove(user);
+		if (not_eligible_cooldown[user.id]) {
+			if (Date.now() - not_eligible_cooldown[user.id] < 15000) {
+				return;
+			}
 		}
-		db.get("SELECT * FROM blacklist WHERE id = ?", user.id, function (err, row) {
-			user_blacklisted(user.id, function (user_blacklisted) {
-				if (user_blacklisted) {
-					reaction.remove(user);
-					if (not_eligible_cooldown[user.id]) {
-						if (Date.now() - not_eligible_cooldown[user.id] < 15000) {
-							return;
-						}
-					}
-					not_eligible_cooldown[user.id] = Date.now();
-					user.send(embeds.ENTRY_FAIL_BLACKLISTED);
-					return;
-				} else {
-					db.get("SELECT * FROM entries WHERE id = ?", user.id, function (err, row) {
-						user_exists(user.id, function (user_exists) {
-							// Check if user exists in url table
-							if (!user_exists) {
-								reaction.remove(user);
-								if (no_tradeurl_cooldown[user.id]) {
-									if (Date.now() - no_tradeurl_cooldown[user.id] < 15000) {
-										return;
-									}
-								}
-								no_tradeurl_cooldown[user.id] = Date.now();
-								user.send(embeds.ENTRY_FAIL_NO_URL);
-								return;
-							}
-							// Enter giveaway if row does not exist
-							if (!row) {
-								db.get("SELECT * FROM (SELECT * FROM giveaways ORDER BY id DESC LIMIT 4 OFFSET 1) WHERE winner = ?", user.id, function (err, row) {
-									if (row) {
-										reaction.remove(user);
-										if (not_eligible_cooldown[user.id]) {
-											if (Date.now() - not_eligible_cooldown[user.id] < 15000) {
-												return;
-											}
-										}
-										not_eligible_cooldown[user.id] = Date.now();
-										user.send(embeds.ENTRY_FAIL_RECENT_WINNER);
-									} else {
-										reaction.message.guild.fetchMember(user).then(function (member) {
-											if (!member.roles.find(e => e.name == '1-10')) {
-												reaction.remove(user);
-												if (not_eligible_cooldown[user.id]) {
-													if (Date.now() - not_eligible_cooldown[user.id] < 15000) {
-														return;
-													}
-												}
-												not_eligible_cooldown[user.id] = Date.now();
-												user.send(embeds.ENTRY_FAIL_NO_LEVEL);
-											} else {
-												insert_user(user.id);
-												user.send(embeds.ENTRY_SUCCESS);
-											}
-										});
-									}
-								});
-							} else {
-								if (not_eligible_cooldown[user.id]) {
-									if (Date.now() - not_eligible_cooldown[user.id] < 15000) {
-										return;
-									}
-								}
-								not_eligible_cooldown[user.id] = Date.now();
-								user.send(embeds.ENTRY_FAILED_ALREADY_ENTERED);
-							}
-						});
-					});
-				}
-			});
-		});
-	});
+		not_eligible_cooldown[user.id] = Date.now();
+		user.send(embeds.ENTRY_FAIL_BLACKLISTED);
+		return;
+	}
+
+	// If user has won recently (within 4 giveaways)
+	if (await user_recently_won(user.id)) {
+		reaction.remove(user);
+		if (not_eligible_cooldown[user.id]) {
+			if (Date.now() - not_eligible_cooldown[user.id] < 15000) {
+				return;
+			}
+		}
+		not_eligible_cooldown[user.id] = Date.now();
+		user.send(embeds.ENTRY_FAIL_RECENT_WINNER);
+		return;
+	}
+
+	// If user is missing their trade url
+	if (!await user_exists(user.id)) {
+		reaction.remove(user);
+		if (no_tradeurl_cooldown[user.id]) {
+			if (Date.now() - no_tradeurl_cooldown[user.id] < 15000) {
+				return;
+			}
+		}
+		no_tradeurl_cooldown[user.id] = Date.now();
+		user.send(embeds.ENTRY_FAIL_NO_URL);
+		return;
+	}
+
+	// If user does not have 1-10 role
+	var member = await reaction.message.guild.fetchMember(user);
+	if (!member.roles.find(e => e.name == '1-10')) {
+		reaction.remove(user);
+		if (not_eligible_cooldown[user.id]) {
+			if (Date.now() - not_eligible_cooldown[user.id] < 15000) {
+				return;
+			}
+		}
+		not_eligible_cooldown[user.id] = Date.now();
+		user.send(embeds.ENTRY_FAIL_NO_LEVEL);
+		return;
+	}
+
+	// End eligibility checks
+
+	// Enter giveaway if not already entered
+	if (!await entry_exists(user.id)) {
+		insert_user(user.id);
+		user.send(embeds.ENTRY_SUCCESS);
+	} else {
+		if (not_eligible_cooldown[user.id]) {
+			if (Date.now() - not_eligible_cooldown[user.id] < 15000) {
+				return;
+			}
+		}
+		not_eligible_cooldown[user.id] = Date.now();
+		user.send(embeds.ENTRY_FAILED_ALREADY_ENTERED);
+	}
 });
 
-client.on('guildMemberRemove', usr => {
-	entry_exists(usr.id, function (exists) {
-		if (exists) {
-			remove_user(usr.id);
-		} else {
-			return;
-		}
-	});
+client.on('guildMemberRemove', async(usr) => {
+	if (await entry_exists(usr.id)) {
+		remove_user(usr.id);
+	} else {
+		return;
+	}
 });
 
-client.on('message', msg => {
+client.on('message', async(msg) => {
 
 	if (msg.author.bot) {
 		return;
@@ -531,22 +613,18 @@ client.on('message', msg => {
 		if (!match) {
 			msg.author.send(embeds.URL_FAIL_INVALID_ARGS);
 		} else {
-			url_exists(tradeurl, function (exists) {
-				if (exists) {
-					console.log(`User with ID:${msg.author.id} and name:${msg.author.tag} tried to add a trade url that another user has already added! Their message: ${msg.content}`);
-					msg.author.send(embeds.URL_FAIL_ALREADY_EXISTS);
+			if (await url_exists(tradeurl)) {
+				console.log(`User with ID:${msg.author.id} and name:${msg.author.tag} tried to add a trade url that another user has already added! Their message: ${msg.content}`);
+				msg.author.send(embeds.URL_FAIL_ALREADY_EXISTS);
+			} else {
+				if (await user_exists(msg.auuthor.id)) {
+					update_tradeurl(msg.author.id, tradeurl);
+					msg.author.send(embeds.URL_SUCCESS_UPDATE(tradeurl));
 				} else {
-					db.get("SELECT * FROM users WHERE id = ?", msg.author.id, function (err, row) {
-						if (row) {
-							update_tradeurl(msg.author.id, tradeurl);
-							msg.author.send(embeds.URL_SUCCESS_UPDATE(tradeurl));
-						} else {
-							insert_tradeurl(msg.author.id, tradeurl);
-							msg.author.send(embeds.URL_SUCCESS_SET);
-						}
-					});
+					insert_tradeurl(msg.author.id, tradeurl);
+					msg.author.send(embeds.URL_SUCCESS_SET);
 				}
-			});
+			}
 		}
 	}
 
@@ -561,22 +639,18 @@ client.on('message', msg => {
 	}
 
 	if (command == 'removeurl') {
-		user_exists(msg.author.id, function (exists) {
-			if (exists) {
-				entry_exists(msg.author.id, function (user_exists) {
-					if (user_exists) {
-						remove_user(msg.author.id);
-						delete_tradeurl(msg.author.id);
-						msg.channel.send(embeds.REMOVE_URL_SUCCESS_ENTERED);
-					} else {
-						delete_tradeurl(msg.author.id);
-						msg.channel.send(embeds.REMOVE_URL_SUCCESS);
-					}
-				});
+		if (await user_exists(msg.author.id)) {
+			if (await entry_exists(msg.author.id)) {
+				remove_user(msg.author.id);
+				delete_tradeurl(msg.author.id);
+				msg.channel.send(embeds.REMOVE_URL_SUCCESS_ENTERED);
 			} else {
-				msg.channel.send(embeds.REMOVE_URL_FAIL_NO_URL);
+				delete_tradeurl(msg.author.id);
+				msg.channel.send(embeds.REMOVE_URL_SUCCESS);
 			}
-		});
+		} else {
+			msg.channel.send(embeds.REMOVE_URL_FAIL_NO_URL);
+		}
 	}
 
 	if (command == 'info') {
@@ -620,33 +694,26 @@ client.on('message', msg => {
 	if (command == 'checkreactions') {
 		// If the bot is offline for an extended period of time and we need to recheck reactions
 		if (config.ownerID.includes(msg.author.id)) {
-			latest_giveaway(function (msgid, row_id) {
-				client.channels.get(config.channel_id).fetchMessage(msgid)
-					.then(message => {
-						var reactions = message.reactions;
-						var check_reaction = reactions.find(function (r) {
-							return r.emoji.name == '✅';
-						});
-						check_reaction.fetchUsers().then(users => {
-							users.forEach(function (user) {
-								db.get("SELECT * FROM entries WHERE id = ?", user.id, function (err, row) {
-									user_exists(user.id, function (user_exists) {
-										// Check if user exists in url table
-										if (!user_exists) {
-											return;
-										}
-										// Enter giveaway if row does not exist
-										if (!row) {
-											insert_user(user.id);
-											console.log("inserted: " + user.id);
-										}
-									});
-								});
-							});
-							msg.channel.send('Done.');
-						});
-					});
+			var latest = await latest_giveaway();
+			var message = await client.channels.get(config.channel_id).fetchMessage(latest.msgid)
+			var reactions = message.reactions;
+			var check_reaction = reactions.find(function (r) {
+				return r.emoji.name == '✅';
+				return r.emoji.name == '✅';
 			});
+			var users = await check_reaction.fetchUsers()
+			users.forEach(async(user) => {
+				// Check if user exists in url table
+				if (!await user_exists(user.id)) {
+					return;
+				}
+				// Enter giveaway if entry row does not exist
+				if (!await entry_exists(user.id)) {
+					insert_user(user.id);
+					console.log("inserted: " + user.id);
+				}
+			});
+			msg.channel.send('Done.');
 		} else {
 			return;
 		}
@@ -688,7 +755,7 @@ client.on('message', msg => {
 		// Command to ban someone xdxd
 		if (config.ownerID.includes(msg.author.id)) {
 			if (args.length == 1) {
-				let user_id = args[0].replace(/\D/g, '');
+				var user_id = args[0].replace(/\D/g, '');
 				if (user_id.length == 0) {
 					msg.channel.send('Invalid ID.');
 					return;
@@ -697,41 +764,36 @@ client.on('message', msg => {
 				msg.channel.send('You have to supply an ID to blacklist...');
 				return;
 			}
-
-			user_blacklisted(id, function (blacklisted) {
-				if (!blacklisted) {
-					insert_blacklist(id);
-					msg.channel.send('The ID ' + id + ' has been banned!');
-				} else {
-					msg.channel.send('That user is already blacklisted.');
-				}
-			});
+			if (await user_blacklisted(user_id)) {
+				msg.channel.send('That user is already blacklisted.');
+			} else {
+				insert_blacklist(user_id);
+				msg.channel.send('The ID ' + user_id + ' has been banned!');
+			}
 		} else {
 			return;
 		}
 	}
+
 	if (command == 'unblacklist') {
 		// Command to unban someone
 		if (config.ownerID.includes(msg.author.id)) {
 			if (args.length == 1) {
-				let user_id = args[0].replace(/\D/g, '');
+				var user_id = args[0].replace(/\D/g, '');
 				if (user_id.length == 0) {
 					msg.channel.send('Invalid ID.');
 					return;
 				}
 			} else {
-				msg.channel.send('You have to supply an ID to blacklist...');
+				msg.channel.send('You have to supply an ID to blacklist.');
 				return;
 			}
-
-			user_blacklisted(id, function (blacklisted) {
-				if (blacklisted) {
-					remove_blacklist(id);
-					msg.channel.send('The ID ' + id + ' has been unbanned!');
-				} else {
-					msg.channel.send('That user isn\'t even blacklisted.');
-				}
-			});
+			if (await user_blacklisted(user_id)) {
+				remove_blacklist(user_id);
+				msg.channel.send('The ID ' + user_id + ' has been unbanned!');
+			} else {
+				msg.channel.send('That user isn\'t even blacklisted.');
+			}
 		} else {
 			return;
 		}
@@ -760,69 +822,62 @@ client.on('message', msg => {
 	}
 
 	if (command == 'total') {
-		number_entrants(function (number) {
-			msg.channel.send(embeds.TOTAL_ENTRANTS(number));
-		});
+		try {
+			msg.channel.send(embeds.TOTAL_ENTRANTS(await number_entrants()));
+		} catch (e) {
+			msg.channel.send('Failed to query database!');
+		}
 	}
 
 	if (command == 'mystatus') {
-		entry_exists(msg.author.id, function (exists) {
-			if (exists) {
-				msg.channel.send(embeds.MY_STATUS_TRUE);
-			} else {
-				msg.channel.send(embeds.MY_STATUS_FALSE);
-			}
-		});
+		if (await entry_exists()) {
+			msg.channel.send(embeds.MY_STATUS_TRUE);
+		} else {
+			msg.channel.send(embeds.MY_STATUS_FALSE);
+		}
 	}
 
 	if (command == 'mytradeurl') {
-		get_url(msg.author.id, function (url) {
-			if (url) {
-				msg.channel.send(embeds.MY_URL(url));
-			} else {
-				msg.channel.send(embeds.MY_URL_FAIL_NO_URL);
-			}
-		});
+		var url = await get_url();
+		if (url) {
+			msg.channel.send(embeds.MY_URL(url));
+		} else {
+			msg.channel.send(embeds.MY_URL_FAIL_NO_URL);
+		}
 	}
 
 	if (command == 'blacklisted') {
-		var users = [];
-		db.each("SELECT CAST(id AS TEXT) AS uid FROM blacklist", function (err, row) {
-			if (row) {
-				users.push(row.uid);
-			}
-		}, function (err, num_rows) {
-			msg.channel.send('```\n' + users.join('\n') + '```');
-		});
+		var users = await get_blacklist();
+		msg.channel.send('```\n' + users.join('\n') + '```');
 	}
 
 	if (command == 'botitems') {
-		inventory_contents(function (items) {
-			msg.author.send(embeds.BOT_ITEMS(items));
-		});
+		try {
+			msg.author.send(embeds.BOT_ITEMS(await inventory_contents()));
+		} catch (e) {
+			msg.channel.send('There is a very retarded bug with this command involving an expired session, and I do not want to fix it. Retry this command to get your results.')
+		}
 	}
 
 	if (command == 'cede') {
-		entry_exists(msg.author.id, function (exists) {
-			if (exists) {
-				remove_user(msg.author.id);
-				msg.channel.send(embeds.REMOVE_ENTRY_SUCCESS);
-			} else {
-				msg.channel.send(embeds.REMOVE_ENTRY_FAIL_NOT_ENTERED);
-			}
-		});
+		if (await entry_exists(msg.author.id)) {
+			remove_user(msg.author.id);
+			msg.channel.send(embeds.REMOVE_ENTRY_SUCCESS);
+		} else {
+			msg.channel.send(embeds.REMOVE_ENTRY_FAIL_NOT_ENTERED);
+		}
 	}
 });
 
 // Update game status
 var status_j = schedule.scheduleJob('*/5 * * * *', function () {
-	number_entrants(function (count) {
-		if (count) {
+	number_entrants()
+		.then((count) => {
 			client.user.setGame(`g>help | ${count} Entries!`, "https://www.twitch.tv/Courierfive");
-		} else {
+		})
+		.catch((e) => {
 			client.user.setGame(`g>help | 0 Entries!`, "https://www.twitch.tv/Courierfive");
-		}
-	});
+		});
 });
 
 var loggedin_j = schedule.scheduleJob('50 * * * *', function () {
@@ -875,60 +930,64 @@ var relog_j = schedule.scheduleJob({
 // Send prize, update giveaway messages.
 var j = schedule.scheduleJob({
 	hour: 16,
-	minute: 01
-}, function () {
+	minute: 1
+}, async() => {
+
 	if (Date.now() - giveaway_time_check < 5000) {
 		console.log("Double giveaway, canceling task.");
 		return;
 	}
 	giveaway_time_check = Date.now();
 	console.log('Winner picked. Next giveaway beginning.');
-	select_winner(function (winner) {
-		if (!winner) {
-			client.channels.get(config.channel_id).send(embeds.NOBODY_ENTERED).then(message => message.delete(300000));
-			latest_giveaway(function (previous_id, row_id) {
-				client.channels.get(config.channel_id).fetchMessage(previous_id)
-					.then(message => {
-						message.edit(embeds.WINNER_EDIT_NOBODY);
-						client.channels.get(config.channel_id).send(embeds.GIVEAWAY).then((m) => {
-							m.react("✅");
-							insert_giveaway(m.id);
-						});
-					});
-			});
-		} else {
-			client.channels.get(config.channel_id).send(embeds.SELECTED_WINNER(winner)).then(message => message.delete(300000))
-				.catch(console.error);
+	var winner = await select_winner();
 
-			// Gets url, sends prize to winner.
-			get_url(winner, function (url) {
-				client.fetchUser(winner).then((User) => {
-					User.send(embeds.WINNER_ALERT(url));
-				});
-				latest_giveaway(function (previous_id, row_id) {
-					client.channels.get(config.channel_id).fetchMessage(previous_id)
-						.then(message => {
-							message.edit(embeds.WINNER_EDIT(winner));
-						});
-					db.each("SELECT CAST(id AS TEXT) AS uid FROM entries WHERE id != ?", winner, function (err, row) {
-						if (row) {
-							client.fetchUser(row.uid).then((User) => {
-								User.send(embeds.MASS_DM);
-							});
-						}
-					}, function (err, num_rows) {
-						console.log('Sent mass DM to ' + num_rows + ' entrants.');
-						clear_entries();
-						update_giveaway(row_id, winner);
-						client.channels.get(config.channel_id).send(embeds.GIVEAWAY).then((m) => {
-							m.react("✅");
-							insert_giveaway(m.id);
-						});
-					});
-				});
-				send_prize(url, winner);
+	if (winner == null) {
+		client.channels.get(config.channel_id).send(embeds.NOBODY_ENTERED)
+			.then(message => {
+				message.delete(300000);
+			});
+		var latest = await latest_giveaway();
+		client.channels.get(config.channel_id).fetchMessage(latest.msgid)
+			.then(prev_message => {
+				prev_message.edit(embeds.WINNER_EDIT_NOBODY);
+			});
+		client.channels.get(config.channel_id).send(embeds.GIVEAWAY)
+			.then(new_message => {
+				new_message.react("✅");
+				insert_giveaway(new_message.id);
+			});
+		return;
+	}
+
+	var winner_message = await client.channels.get(config.channel_id).send(embeds.SELECTED_WINNER(winner));
+	winner_message.delete(300000);
+
+	// Gets url, sends prize to winner.
+	var url = await get_url();
+	client.fetchUser(winner).then(winner_user => {
+		winner_user.send(embeds.WINNER_ALERT(url));
+	});
+	var latest = await latest_giveaway();
+	client.channels.get(config.channel_id).fetchMessage(latest.msgid).then(winner_message => {
+		winner_message.edit(embeds.WINNER_EDIT(winner));
+	});
+
+
+	db.each("SELECT CAST(id AS TEXT) AS uid FROM entries WHERE id != ?", winner, (err, row) => {
+		if (row) {
+			client.fetchUser(row.uid).then((User) => {
+				User.send(embeds.MASS_DM);
 			});
 		}
+	}, (err, num_rows) => {
+		console.log('Sent mass DM to ' + num_rows + ' entrants.');
+		clear_entries();
+		update_giveaway(latest.rowid, winner);
+		client.channels.get(config.channel_id).send(embeds.GIVEAWAY).then((m) => {
+			m.react("✅");
+			insert_giveaway(m.id);
+		});
 	});
+	send_prize(url, winner);
 });
 client.login(config.token);
