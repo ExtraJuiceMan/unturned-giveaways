@@ -293,7 +293,7 @@ function send_prize(url, winner) {
 	});
 }
 
-// Functions w/ callbacks
+// Functions that return promises
 function latest_giveaway() {
 	return new Promise((resolve, reject) => {
 		db.get("SELECT CAST(msgid AS TEXT) AS msgid, id FROM giveaways WHERE id = (SELECT MAX(id) FROM giveaways);", function (err, row) {
