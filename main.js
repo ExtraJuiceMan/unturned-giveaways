@@ -609,8 +609,7 @@ client.on('message', async(msg) => {
 			return;
 		}
 		var tradeurl = args[0];
-		var match = tradeurl.startsWith('https://');
-		if (!match) {
+		if (!tradeurl.startsWith('https://')) {
 			msg.author.send(embeds.URL_FAIL_INVALID_ARGS);
 		} else {
 			if (await url_exists(tradeurl)) {
@@ -838,7 +837,7 @@ client.on('message', async(msg) => {
 	}
 
 	if (command == 'mytradeurl') {
-		var url = await get_url();
+		var url = await get_url(msg.author.id);
 		if (url) {
 			msg.channel.send(embeds.MY_URL(url));
 		} else {
@@ -963,7 +962,7 @@ var j = schedule.scheduleJob({
 	winner_message.delete(300000);
 
 	// Gets url, sends prize to winner.
-	var url = await get_url();
+	var url = await get_url(winner);
 	client.fetchUser(winner).then(winner_user => {
 		winner_user.send(embeds.WINNER_ALERT(url));
 	});
