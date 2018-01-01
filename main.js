@@ -829,7 +829,7 @@ client.on('message', async(msg) => {
 	}
 
 	if (command == 'mystatus') {
-		if (await entry_exists()) {
+		if (await entry_exists(msg.author.id)) {
 			msg.channel.send(embeds.MY_STATUS_TRUE);
 		} else {
 			msg.channel.send(embeds.MY_STATUS_FALSE);
