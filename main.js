@@ -349,7 +349,6 @@ function user_exists(id) {
 				reject(err);
 			}
 			if (row) {
-				console.log(row.id);
 				resolve(true);
 			} else {
 				resolve(false);
@@ -861,6 +860,11 @@ client.on('message', async(msg) => {
 	if (command == 'cede') {
 		if (await entry_exists(msg.author.id)) {
 			remove_user(msg.author.id);
+			latest = await latest_giveaway();
+			client.channels.get(config.channel_id).fetchMessage(latest.msgid)
+			.then(message => {
+				message.reactions.find(x => x.emoji.name == '✅').remove(msg.author)
+			});
 			msg.channel.send(embeds.REMOVE_ENTRY_SUCCESS);
 		} else {
 			msg.channel.send(embeds.REMOVE_ENTRY_FAIL_NOT_ENTERED);
