@@ -615,7 +615,7 @@ client.on('message', async(msg) => {
 				console.log(`User with ID:${msg.author.id} and name:${msg.author.tag} tried to add a trade url that another user has already added! Their message: ${msg.content}`);
 				msg.author.send(embeds.URL_FAIL_ALREADY_EXISTS);
 			} else {
-				if (await user_exists(msg.auuthor.id)) {
+				if (await user_exists(msg.author.id)) {
 					update_tradeurl(msg.author.id, tradeurl);
 					msg.author.send(embeds.URL_SUCCESS_UPDATE(tradeurl));
 				} else {
