@@ -11,7 +11,7 @@ const config = require("./config.json");
 const embeds = require("./giveaway_embeds.js");
 const db = new sqlite3.Database('./data.db');
 
-const ITEM_TYPES = ["common", "premium", "mythical", "rare", "uncommon"];
+const ITEM_TYPES = ["common", "premium", "mythical", "rare", "uncommon", "epic"];
 var session_expire_login = 0;
 var giveaway_time_check = 0;
 var reminder_time_check = 0;
